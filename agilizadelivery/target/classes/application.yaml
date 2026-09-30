@@ -1,0 +1,10 @@
+spring:
+  application:
+    name: agilizadelivery
+  docker:
+    compose:
+      enabled: false
+  profiles:
+    active: h2
+  jpa:
+    open-in-view: false
