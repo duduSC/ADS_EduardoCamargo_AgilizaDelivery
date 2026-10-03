@@ -98,21 +98,9 @@ public class Motoboy extends EntidadeBase {
     @Column(name = "ultima_posicao_em")
     private LocalDateTime ultimaPosicaoEm;
 
-    /** Aceite do termo no primeiro acesso ao aplicativo (RNF07). */
-    @Column(name = "consentimento_lgpd_em")
-    private LocalDateTime consentimentoLgpdEm;
-
-    @Size(max = 10)
-    @Column(name = "consentimento_lgpd_versao", length = 10)
-    private String consentimentoLgpdVersao;
-
-    /**
-     * Um entregador so pode receber lote estando ATIVO e ONLINE (HU02),
-     * e com o consentimento LGPD registrado (RNF07).
-     */
+    /** Um entregador so recebe lote estando ATIVO e ONLINE (HU02). */
     public boolean podeReceberLote() {
         return StatusCadastroMotoboy.ATIVO.equals(this.statusCadastro)
-                && StatusDisponibilidadeMotoboy.ONLINE.equals(this.statusDisponibilidade)
-                && this.consentimentoLgpdEm != null;
+                && StatusDisponibilidadeMotoboy.ONLINE.equals(this.statusDisponibilidade);
     }
 }
