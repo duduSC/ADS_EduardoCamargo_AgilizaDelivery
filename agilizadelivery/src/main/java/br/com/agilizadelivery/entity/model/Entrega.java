@@ -181,8 +181,12 @@ public class Entrega extends EntidadeDoEstabelecimento {
         return emEstadoFinal() && !Boolean.TRUE.equals(this.pendenteRevisao) && this.recibo == null;
     }
 
-    /** Apos a vinculacao ao recibo, o valor e imutavel (HU07). */
+    /**
+     * O valor pode ser ajustado enquanto a entrega nao entrou em recibo
+     * ou, tendo entrado, enquanto o caixa daquele dia segue aberto
+     * (UC03 A1). O fechamento do caixa e que torna o valor imutavel.
+     */
     public boolean permiteAjusteDeValor() {
-        return this.recibo == null;
+        return this.recibo == null || this.recibo.permiteAlteracao();
     }
 }

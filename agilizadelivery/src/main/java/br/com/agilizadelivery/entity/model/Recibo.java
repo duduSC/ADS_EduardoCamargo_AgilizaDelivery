@@ -26,9 +26,13 @@ import lombok.Setter;
  *
  * A data de geracao e o criadoEm herdado: o recibo nasce GERADO.
  *
- * Uma vez vinculadas ao recibo, as entregas tem o valor congelado e nao
- * podem entrar em outro recibo. Cancelar o recibo (UC03 A2) desvincula as
- * entregas e as libera para novo acerto; recibos PAGOS nao sao cancelaveis.
+ * Uma vez vinculadas ao recibo, as entregas nao podem entrar em outro
+ * recibo. Cancelar o recibo (UC03 A2) desvincula as entregas e as libera
+ * para novo acerto.
+ *
+ * O limite para corrigir e o fechamento do Caixa do dia, e nao o
+ * pagamento: enquanto o caixa estiver aberto, um recibo ja pago ainda
+ * pode ser cancelado e refeito.
  */
 @Getter
 @Setter
@@ -37,6 +41,12 @@ import lombok.Setter;
 @Entity
 @Table(name = "recibo")
 public class Recibo extends EntidadeDoEstabelecimento {
+
+    /** Periodo de operacao a que este acerto pertence. */
+    @NotNull
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "caixa_id", nullable = false)
+    private Caixa caixa;
 
     /** Beneficiario do repasse. */
     @NotNull
@@ -82,8 +92,24 @@ public class Recibo extends EntidadeDoEstabelecimento {
     @Column(name = "pago_em")
     private LocalDateTime pagoEm;
 
-    /** Somente recibos ainda nao pagos podem ser cancelados (UC03 A2). */
+    /**
+     * O que trava um acerto e o fechamento do caixa, nao o pagamento.
+     *
+     * Enquanto o caixa do dia estiver aberto, um recibo ja pago ainda
+     * pode ser cancelado e refeito: divergencias costumam aparecer
+     * minutos depois, ao conferir com outro entregador. Um recibo ja
+     * cancelado nao e cancelado de novo.
+     */
     public boolean podeSerCancelado() {
-        return StatusRecibo.GERADO.equals(this.status);
+        return !StatusRecibo.CANCELADO.equals(this.status) && estaEmCaixaAberto();
+    }
+
+    /** Vale tanto para o valor do recibo quanto para as entregas nele. */
+    public boolean permiteAlteracao() {
+        return estaEmCaixaAberto();
+    }
+
+    private boolean estaEmCaixaAberto() {
+        return this.caixa != null && this.caixa.estaAberto();
     }
 }
