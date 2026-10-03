@@ -1,5 +1,7 @@
 package br.com.agilizadelivery.entity.model;
 
+import br.com.agilizadelivery.entity.model.base.EntidadeBase;
+import br.com.agilizadelivery.entity.model.embeddable.Coordenada;
 import br.com.agilizadelivery.entity.model.enums.StatusEstabelecimento;
 import jakarta.persistence.Column;
 import jakarta.persistence.Embedded;

@@ -1,5 +1,6 @@
-package br.com.agilizadelivery.entity.model;
+package br.com.agilizadelivery.entity.model.base;
 
+import br.com.agilizadelivery.entity.model.Estabelecimento;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;

@@ -1,5 +1,7 @@
 package br.com.agilizadelivery.entity.model;
 
+import br.com.agilizadelivery.entity.model.base.EntidadeBase;
+import br.com.agilizadelivery.entity.model.embeddable.Coordenada;
 import java.time.LocalDateTime;
 
 import br.com.agilizadelivery.entity.model.enums.StatusCadastroMotoboy;

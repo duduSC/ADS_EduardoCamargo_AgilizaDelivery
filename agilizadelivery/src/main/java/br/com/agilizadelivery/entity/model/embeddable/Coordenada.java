@@ -1,4 +1,4 @@
-package br.com.agilizadelivery.entity.model;
+package br.com.agilizadelivery.entity.model.embeddable;
 
 import java.math.BigDecimal;
 
