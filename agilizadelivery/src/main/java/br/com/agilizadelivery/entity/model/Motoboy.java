@@ -27,9 +27,15 @@ import lombok.Setter;
 /**
  * Dados operacionais do entregador (DVP 1.5.4).
  *
- * A credencial de acesso fica em Usuario, ligado aqui por @OneToOne.
- * O estabelecimento do entregador e alcancado por esse vinculo:
- * motoboy.getUsuario().getEstabelecimento().
+ * Guarda apenas o que e especifico da funcao de entregador. O nome, a
+ * credencial e o vinculo com o estabelecimento vem do Usuario associado,
+ * que e obrigatorio:
+ *
+ *   motoboy.getUsuario().getNome()
+ *   motoboy.getUsuario().getEstabelecimento()
+ *
+ * Manter o nome em um unico lugar evita que o cadastro e a credencial
+ * divirjam, ja que nada no banco forcaria a sincronia entre os dois.
  */
 @Getter
 @Setter
@@ -44,11 +50,6 @@ public class Motoboy extends EntidadeBase {
     @OneToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "usuario_id", nullable = false, unique = true)
     private Usuario usuario;
-
-    @NotBlank
-    @Size(max = 120)
-    @Column(name = "nome", nullable = false, length = 120)
-    private String nome;
 
     /**
      * CPF cifrado em repouso com AES-GCM (RNF02 e RNF07). Como o IV e
