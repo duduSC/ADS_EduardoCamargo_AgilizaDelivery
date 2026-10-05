@@ -191,4 +191,24 @@ public class Entrega extends EntidadeDoEstabelecimento {
     public boolean permiteAjusteDeValor() {
         return this.recibo == null || this.recibo.permiteAlteracao();
     }
+
+    /**
+     * O entregador pode contestar o valor de uma entrega concluida
+     * enquanto ela ainda for corrigivel, isto e, ate o fechamento do
+     * caixa (UC08). Contestar uma entrega ja em revisao nao tem efeito.
+     */
+    public boolean podeSerContestada() {
+        return emEstadoFinal()
+                && !Boolean.TRUE.equals(this.pendenteRevisao)
+                && permiteAjusteDeValor();
+    }
+
+    /**
+     * Marca a entrega para revisao a pedido do entregador. Ela sai do
+     * calculo do acerto ate que o operador a analise (DVP 1.5.5, passo 8).
+     */
+    public void contestar() {
+        this.pendenteRevisao = true;
+        this.motivoRevisao = MotivoRevisao.CONTESTACAO_ENTREGADOR;
+    }
 }
