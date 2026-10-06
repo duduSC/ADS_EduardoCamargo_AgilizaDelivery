@@ -1,5 +1,6 @@
 package br.com.agilizadelivery.entity.model;
 
+import br.com.agilizadelivery.entity.model.base.EntidadeDoEstabelecimento;
 import java.time.LocalDateTime;
 
 import br.com.agilizadelivery.entity.model.enums.Provedor;

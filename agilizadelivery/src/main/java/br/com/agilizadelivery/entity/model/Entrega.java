@@ -1,5 +1,7 @@
 package br.com.agilizadelivery.entity.model;
 
+import br.com.agilizadelivery.entity.model.base.EntidadeDoEstabelecimento;
+import br.com.agilizadelivery.entity.model.embeddable.Coordenada;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 

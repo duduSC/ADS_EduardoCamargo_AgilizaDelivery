@@ -1,4 +1,4 @@
-package br.com.agilizadelivery.entity.model;
+package br.com.agilizadelivery.entity.model.base;
 
 import java.time.LocalDateTime;
 import java.util.UUID;

@@ -1,5 +1,6 @@
 package br.com.agilizadelivery.entity.model;
 
+import br.com.agilizadelivery.entity.model.base.EntidadeBase;
 import java.time.LocalDateTime;
 
 import br.com.agilizadelivery.entity.model.enums.PerfilUsuario;
