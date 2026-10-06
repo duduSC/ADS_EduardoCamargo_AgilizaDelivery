@@ -1,5 +1,7 @@
 package br.com.agilizadelivery.entity.model;
 
+import java.math.BigDecimal;
+
 import br.com.agilizadelivery.entity.model.base.EntidadeBase;
 import br.com.agilizadelivery.entity.model.embeddable.Coordenada;
 import br.com.agilizadelivery.entity.model.enums.StatusEstabelecimento;
@@ -13,6 +15,7 @@ import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
+import jakarta.validation.constraints.PositiveOrZero;
 import jakarta.validation.constraints.Size;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -72,4 +75,16 @@ public class Estabelecimento extends EntidadeBase {
     @Positive
     @Column(name = "max_pedidos_por_lote", nullable = false)
     private Short maxPedidosPorLote = 5;
+
+    /**
+     * Repasse aplicado quando a distancia ultrapassa a ultima faixa da
+     * loja, ou seja, quando o cliente esta fora do raio de entrega
+     * (DVP 1.5.5, passo 3).
+     *
+     * Nesse caso a entrega fica com faixa_preco_id nulo e segue o fluxo
+     * normalmente, sem pendencia de revisao.
+     */
+    @PositiveOrZero
+    @Column(name = "valor_repasse_fora_de_area", precision = 10, scale = 2)
+    private BigDecimal valorRepasseForaDeArea;
 }
