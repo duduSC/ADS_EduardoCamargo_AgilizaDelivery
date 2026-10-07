@@ -159,11 +159,20 @@ public class Entrega extends EntidadeDoEstabelecimento {
     @Column(name = "motivo_revisao", length = 30)
     private MotivoRevisao motivoRevisao;
 
+    /**
+     * Momento em que a cozinha concluiu o pedido, marcado pelo operador
+     * (UC01, passo 5). Junto com despachadaEm, mede quanto tempo o pedido
+     * aguardou na estufa, que e a metrica de aceleracao do despacho
+     * (DVP 1.2.3).
+     *
+     * Fica nulo quando o despacho e imediato e o operador nao chega a
+     * marcar o pedido como pronto (UC01 A5).
+     */
+    @Column(name = "pronto_para_despacho_em")
+    private LocalDateTime prontoParaDespachoEm;
+
     @Column(name = "despachada_em")
     private LocalDateTime despachadaEm;
-
-    @Column(name = "saiu_para_entrega_em")
-    private LocalDateTime saiuParaEntregaEm;
 
     @Column(name = "finalizada_em")
     private LocalDateTime finalizadaEm;
