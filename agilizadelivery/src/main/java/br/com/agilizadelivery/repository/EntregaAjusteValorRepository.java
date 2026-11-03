@@ -19,4 +19,8 @@ public interface EntregaAjusteValorRepository extends JpaRepository<EntregaAjust
 
     /** Ajustes de uma entrega, em ordem cronologica. */
     List<EntregaAjusteValor> findByEntregaIdOrderByAjustadoEmAsc(UUID entregaId);
+
+    List<EntregaAjusteValor> findByEntregaEstabelecimentoIdAndEntregaIdOrderByAjustadoEmAsc(
+            UUID estabelecimentoId,
+            UUID entregaId);
 }

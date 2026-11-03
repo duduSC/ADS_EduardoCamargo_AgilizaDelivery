@@ -1,13 +1,19 @@
 package br.com.agilizadelivery.service;
 
-import org.springframework.stereotype.Service;
+import java.util.List;
+import java.util.UUID;
 
-import br.com.agilizadelivery.repository.EstabelecimentoRepository;
-import lombok.RequiredArgsConstructor;
+import br.com.agilizadelivery.dto.request.CriarEstabelecimentoRequest;
+import br.com.agilizadelivery.dto.response.EstabelecimentoResponse;
+import br.com.agilizadelivery.entity.model.enums.StatusEstabelecimento;
 
-@Service
-@RequiredArgsConstructor
-public class EstabelecimentoService {
+public interface EstabelecimentoService {
 
-    private final EstabelecimentoRepository estabelecimentoRepository;
+    EstabelecimentoResponse criar(CriarEstabelecimentoRequest request);
+
+    EstabelecimentoResponse buscarPorId(UUID estabelecimentoId);
+
+    List<EstabelecimentoResponse> listarPorStatus(StatusEstabelecimento status);
+
+    EstabelecimentoResponse alterarStatus(UUID estabelecimentoId, StatusEstabelecimento status);
 }

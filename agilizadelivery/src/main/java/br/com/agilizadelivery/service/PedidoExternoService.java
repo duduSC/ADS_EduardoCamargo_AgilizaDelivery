@@ -1,13 +1,21 @@
 package br.com.agilizadelivery.service;
 
-import org.springframework.stereotype.Service;
+import java.util.List;
+import java.util.UUID;
 
-import br.com.agilizadelivery.repository.PedidoExternoRepository;
-import lombok.RequiredArgsConstructor;
+import br.com.agilizadelivery.dto.response.PedidoExternoResponse;
+import br.com.agilizadelivery.entity.model.PedidoExterno;
+import br.com.agilizadelivery.entity.model.enums.Provedor;
 
-@Service
-@RequiredArgsConstructor
-public class PedidoExternoService {
+public interface PedidoExternoService {
 
-    private final PedidoExternoRepository pedidoExternoRepository;
+    PedidoExternoResponse importar(UUID estabelecimentoId, PedidoExterno pedido);
+
+    PedidoExternoResponse buscarPorId(UUID estabelecimentoId, UUID pedidoExternoId);
+
+    List<PedidoExternoResponse> listarNaoProcessados(UUID estabelecimentoId);
+
+    PedidoExternoResponse marcarProcessado(UUID estabelecimentoId, UUID pedidoExternoId);
+
+    boolean jaImportado(Provedor provedor, String idExterno);
 }

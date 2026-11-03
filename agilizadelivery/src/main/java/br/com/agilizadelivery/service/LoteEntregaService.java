@@ -1,13 +1,23 @@
 package br.com.agilizadelivery.service;
 
-import org.springframework.stereotype.Service;
+import java.util.List;
+import java.util.UUID;
 
-import br.com.agilizadelivery.repository.LoteEntregaRepository;
-import lombok.RequiredArgsConstructor;
+import br.com.agilizadelivery.dto.request.DespacharLoteRequest;
+import br.com.agilizadelivery.dto.response.LoteEntregaResponse;
+import br.com.agilizadelivery.entity.model.enums.StatusLote;
 
-@Service
-@RequiredArgsConstructor
-public class LoteEntregaService {
+public interface LoteEntregaService {
 
-    private final LoteEntregaRepository loteEntregaRepository;
+    LoteEntregaResponse despachar(UUID estabelecimentoId, UUID usuarioDespachanteId, DespacharLoteRequest request);
+
+    LoteEntregaResponse buscarPorId(UUID estabelecimentoId, UUID loteId);
+
+    List<LoteEntregaResponse> listarPorEstabelecimentoEStatus(UUID estabelecimentoId, StatusLote status);
+
+    List<LoteEntregaResponse> listarPorMotoboy(UUID estabelecimentoId, UUID motoboyId, StatusLote status);
+
+    LoteEntregaResponse iniciarRota(UUID estabelecimentoId, UUID loteId, UUID motoboyId);
+
+    LoteEntregaResponse devolverDespacho(UUID estabelecimentoId, UUID loteId, UUID usuarioId);
 }

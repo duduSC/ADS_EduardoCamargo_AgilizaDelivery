@@ -1,13 +1,37 @@
 package br.com.agilizadelivery.service;
 
-import org.springframework.stereotype.Service;
+import java.math.BigDecimal;
+import java.util.List;
+import java.util.UUID;
 
-import br.com.agilizadelivery.repository.MotoboyRepository;
-import lombok.RequiredArgsConstructor;
+import br.com.agilizadelivery.dto.request.AlterarDisponibilidadeMotoboyRequest;
+import br.com.agilizadelivery.dto.request.CriarMotoboyRequest;
+import br.com.agilizadelivery.dto.response.MotoboyResponse;
+import br.com.agilizadelivery.entity.model.enums.StatusCadastroMotoboy;
 
-@Service
-@RequiredArgsConstructor
-public class MotoboyService {
+public interface MotoboyService {
 
-    private final MotoboyRepository motoboyRepository;
+    MotoboyResponse criar(UUID estabelecimentoId, CriarMotoboyRequest request);
+
+    MotoboyResponse buscarPorId(UUID estabelecimentoId, UUID motoboyId);
+
+    List<MotoboyResponse> listarPorEstabelecimento(UUID estabelecimentoId);
+
+    List<MotoboyResponse> listarPorStatusCadastro(UUID estabelecimentoId, StatusCadastroMotoboy status);
+
+    MotoboyResponse alterarStatusCadastro(
+            UUID estabelecimentoId,
+            UUID motoboyId,
+            StatusCadastroMotoboy status);
+
+    MotoboyResponse alterarDisponibilidade(
+            UUID estabelecimentoId,
+            UUID motoboyId,
+            AlterarDisponibilidadeMotoboyRequest request);
+
+    MotoboyResponse atualizarPosicao(
+            UUID estabelecimentoId,
+            UUID motoboyId,
+            BigDecimal latitude,
+            BigDecimal longitude);
 }

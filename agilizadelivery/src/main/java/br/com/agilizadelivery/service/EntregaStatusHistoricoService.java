@@ -1,13 +1,11 @@
 package br.com.agilizadelivery.service;
 
-import org.springframework.stereotype.Service;
+import java.util.List;
+import java.util.UUID;
 
-import br.com.agilizadelivery.repository.EntregaStatusHistoricoRepository;
-import lombok.RequiredArgsConstructor;
+import br.com.agilizadelivery.dto.response.EntregaStatusHistoricoResponse;
 
-@Service
-@RequiredArgsConstructor
-public class EntregaStatusHistoricoService {
+public interface EntregaStatusHistoricoService {
 
-    private final EntregaStatusHistoricoRepository entregaStatusHistoricoRepository;
+    List<EntregaStatusHistoricoResponse> listarPorEntrega(UUID estabelecimentoId, UUID entregaId);
 }

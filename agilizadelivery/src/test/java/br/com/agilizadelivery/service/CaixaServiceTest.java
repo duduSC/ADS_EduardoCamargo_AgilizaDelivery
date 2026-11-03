@@ -34,6 +34,7 @@ import br.com.agilizadelivery.exception.TransicaoEstadoInvalidaException;
 import br.com.agilizadelivery.repository.CaixaRepository;
 import br.com.agilizadelivery.repository.EstabelecimentoRepository;
 import br.com.agilizadelivery.repository.UsuarioRepository;
+import br.com.agilizadelivery.service.impl.CaixaServiceImpl;
 
 @ExtendWith(MockitoExtension.class)
 class CaixaServiceTest {
@@ -48,6 +49,8 @@ class CaixaServiceTest {
     private UsuarioRepository usuarioRepository;
 
     @InjectMocks
+    private CaixaServiceImpl caixaServiceImpl;
+
     private CaixaService caixaService;
 
     private UUID estabelecimentoId;
@@ -59,6 +62,7 @@ class CaixaServiceTest {
 
     @BeforeEach
     void setUp() {
+        caixaService = caixaServiceImpl;
         estabelecimentoId = UUID.randomUUID();
         caixaId = UUID.randomUUID();
         usuarioId = UUID.randomUUID();

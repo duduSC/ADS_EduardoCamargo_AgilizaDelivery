@@ -1,13 +1,24 @@
 package br.com.agilizadelivery.service;
 
-import org.springframework.stereotype.Service;
+import java.util.List;
 
-import br.com.agilizadelivery.repository.ConfiguracaoIntegracaoRepository;
-import lombok.RequiredArgsConstructor;
+import java.util.UUID;
 
-@Service
-@RequiredArgsConstructor
-public class ConfiguracaoIntegracaoService {
+import br.com.agilizadelivery.dto.request.SalvarConfiguracaoIntegracaoRequest;
+import br.com.agilizadelivery.dto.response.ConfiguracaoIntegracaoResponse;
+import br.com.agilizadelivery.entity.model.enums.Provedor;
 
-    private final ConfiguracaoIntegracaoRepository configuracaoIntegracaoRepository;
+public interface ConfiguracaoIntegracaoService {
+
+    ConfiguracaoIntegracaoResponse salvar(
+            UUID estabelecimentoId,
+            SalvarConfiguracaoIntegracaoRequest request);
+
+    ConfiguracaoIntegracaoResponse buscarPorEstabelecimentoEProvedor(
+            UUID estabelecimentoId,
+            Provedor provedor);
+
+    List<ConfiguracaoIntegracaoResponse> listarPorEstabelecimento(UUID estabelecimentoId);
+
+    ConfiguracaoIntegracaoResponse alterarAtivo(UUID estabelecimentoId, UUID configuracaoId, boolean ativo);
 }

@@ -19,4 +19,8 @@ public interface EntregaStatusHistoricoRepository extends JpaRepository<EntregaS
 
     /** Historico de uma entrega, do evento mais antigo ao mais recente. */
     List<EntregaStatusHistorico> findByEntregaIdOrderByRegistradoEmAsc(UUID entregaId);
+
+    List<EntregaStatusHistorico> findByEntregaEstabelecimentoIdAndEntregaIdOrderByRegistradoEmAsc(
+            UUID estabelecimentoId,
+            UUID entregaId);
 }

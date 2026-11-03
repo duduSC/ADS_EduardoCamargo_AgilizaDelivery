@@ -1,13 +1,18 @@
 package br.com.agilizadelivery.service;
 
-import org.springframework.stereotype.Service;
+import java.util.List;
+import java.util.UUID;
 
-import br.com.agilizadelivery.repository.FalhaIntegracaoRepository;
-import lombok.RequiredArgsConstructor;
+import br.com.agilizadelivery.dto.response.FalhaIntegracaoResponse;
+import br.com.agilizadelivery.entity.model.enums.StatusFalhaIntegracao;
 
-@Service
-@RequiredArgsConstructor
-public class FalhaIntegracaoService {
+public interface FalhaIntegracaoService {
 
-    private final FalhaIntegracaoRepository falhaIntegracaoRepository;
+    List<FalhaIntegracaoResponse> listarPorStatus(UUID estabelecimentoId, StatusFalhaIntegracao status);
+
+    long contarPorStatus(UUID estabelecimentoId, StatusFalhaIntegracao status);
+
+    FalhaIntegracaoResponse marcarReprocessada(UUID estabelecimentoId, Long falhaId);
+
+    FalhaIntegracaoResponse descartar(UUID estabelecimentoId, Long falhaId);
 }

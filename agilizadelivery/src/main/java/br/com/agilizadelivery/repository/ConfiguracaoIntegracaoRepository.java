@@ -22,6 +22,10 @@ public interface ConfiguracaoIntegracaoRepository extends JpaRepository<Configur
     /** Configuracao de uma loja em um provedor. */
     Optional<ConfiguracaoIntegracao> findByEstabelecimentoIdAndProvedor(UUID estabelecimentoId, Provedor provedor);
 
+    List<ConfiguracaoIntegracao> findByEstabelecimentoId(UUID estabelecimentoId);
+
+    Optional<ConfiguracaoIntegracao> findByIdAndEstabelecimentoId(UUID id, UUID estabelecimentoId);
+
     /** Alimenta o ciclo de polling do worker, a cada 30 segundos (DVP 1.5.6). */
     List<ConfiguracaoIntegracao> findByAtivoTrue();
 

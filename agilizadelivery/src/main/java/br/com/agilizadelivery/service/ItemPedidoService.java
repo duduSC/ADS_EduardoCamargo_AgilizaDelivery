@@ -1,13 +1,11 @@
 package br.com.agilizadelivery.service;
 
-import org.springframework.stereotype.Service;
+import java.util.List;
+import java.util.UUID;
 
-import br.com.agilizadelivery.repository.ItemPedidoRepository;
-import lombok.RequiredArgsConstructor;
+import br.com.agilizadelivery.dto.response.ItemPedidoResponse;
 
-@Service
-@RequiredArgsConstructor
-public class ItemPedidoService {
+public interface ItemPedidoService {
 
-    private final ItemPedidoRepository itemPedidoRepository;
+    List<ItemPedidoResponse> listarPorPedido(UUID estabelecimentoId, UUID pedidoExternoId);
 }
