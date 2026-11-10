@@ -8,7 +8,6 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
 import br.com.agilizadelivery.entity.model.ConfiguracaoIntegracao;
-import br.com.agilizadelivery.entity.model.enums.Provedor;
 
 /**
  * Vinculo de cada loja com a sua conta no provedor de pedidos.
@@ -20,7 +19,7 @@ import br.com.agilizadelivery.entity.model.enums.Provedor;
 public interface ConfiguracaoIntegracaoRepository extends JpaRepository<ConfiguracaoIntegracao, UUID> {
 
     /** Configuracao de uma loja em um provedor. */
-    Optional<ConfiguracaoIntegracao> findByEstabelecimentoIdAndProvedor(UUID estabelecimentoId, Provedor provedor);
+    Optional<ConfiguracaoIntegracao> findByEstabelecimentoIdAndProvedor(UUID estabelecimentoId, String provedor);
 
     List<ConfiguracaoIntegracao> findByEstabelecimentoId(UUID estabelecimentoId);
 
@@ -30,5 +29,5 @@ public interface ConfiguracaoIntegracaoRepository extends JpaRepository<Configur
     List<ConfiguracaoIntegracao> findByAtivoTrue();
 
     /** Identifica a loja a partir do pedido recebido do provedor. */
-    Optional<ConfiguracaoIntegracao> findByProvedorAndMerchantId(Provedor provedor, String merchantId);
+    Optional<ConfiguracaoIntegracao> findByProvedorAndMerchantId(String provedor, String merchantId);
 }

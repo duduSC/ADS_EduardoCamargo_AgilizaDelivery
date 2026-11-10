@@ -5,6 +5,7 @@ import java.math.BigDecimal;
 import br.com.agilizadelivery.entity.model.base.EntidadeBase;
 import br.com.agilizadelivery.entity.model.embeddable.Coordenada;
 import br.com.agilizadelivery.entity.model.enums.StatusEstabelecimento;
+import jakarta.persistence.AttributeOverride;
 import jakarta.persistence.Column;
 import jakarta.persistence.Embedded;
 import jakarta.persistence.EnumType;
@@ -61,8 +62,20 @@ public class Estabelecimento extends EntidadeBase {
     @Column(name = "endereco_completo", nullable = false)
     private String enderecoCompleto;
 
+    /**
+     * Obrigatoria (DVP 1.5.4: latitude e longitude NOT NULL). Coordenada e
+     * anulavel nas outras entidades, por isso a obrigatoriedade e aplicada
+     * aqui, por override.
+     */
     @Valid
+    @NotNull
     @Embedded
+    @AttributeOverride(
+            name = "latitude",
+            column = @Column(name = "latitude", nullable = false, precision = 10, scale = 7))
+    @AttributeOverride(
+            name = "longitude",
+            column = @Column(name = "longitude", nullable = false, precision = 10, scale = 7))
     private Coordenada coordenada;
 
     @NotNull

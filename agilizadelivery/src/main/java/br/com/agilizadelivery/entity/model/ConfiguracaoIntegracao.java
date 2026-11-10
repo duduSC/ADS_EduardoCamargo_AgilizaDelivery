@@ -3,10 +3,7 @@ package br.com.agilizadelivery.entity.model;
 import br.com.agilizadelivery.entity.model.base.EntidadeDoEstabelecimento;
 import java.time.LocalDateTime;
 
-import br.com.agilizadelivery.entity.model.enums.Provedor;
 import jakarta.persistence.Column;
-import jakarta.persistence.EnumType;
-import jakarta.persistence.Enumerated;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Table;
 import jakarta.persistence.UniqueConstraint;
@@ -46,10 +43,14 @@ import lombok.Setter;
         })
 public class ConfiguracaoIntegracao extends EntidadeDoEstabelecimento {
 
-    @NotNull
-    @Enumerated(EnumType.STRING)
+    /**
+     * Texto livre no banco (DVP 3.0); os valores aceitos e a normalizacao
+     * para maiusculas ficam em service.support.Provedores.
+     */
+    @NotBlank
+    @Size(max = 20)
     @Column(name = "provedor", nullable = false, length = 20)
-    private Provedor provedor;
+    private String provedor;
 
     /** Identificador da loja no provedor. */
     @NotBlank
