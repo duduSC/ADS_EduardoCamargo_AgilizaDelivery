@@ -15,21 +15,21 @@ import br.com.agilizadelivery.entity.model.enums.Provedor;
 import br.com.agilizadelivery.exception.ConflitoDadosException;
 import br.com.agilizadelivery.exception.EntidadeNaoEncontradaException;
 import br.com.agilizadelivery.repository.ConfiguracaoIntegracaoRepository;
-import br.com.agilizadelivery.repository.EstabelecimentoRepository;
 import br.com.agilizadelivery.service.ConfiguracaoIntegracaoService;
+import br.com.agilizadelivery.service.support.BuscadorTenant;
 
 @Service
 @Transactional(readOnly = true)
 public class ConfiguracaoIntegracaoServiceImpl implements ConfiguracaoIntegracaoService {
 
     private final ConfiguracaoIntegracaoRepository repository;
-    private final EstabelecimentoRepository estabelecimentoRepository;
+    private final BuscadorTenant buscador;
 
     public ConfiguracaoIntegracaoServiceImpl(
             ConfiguracaoIntegracaoRepository repository,
-            EstabelecimentoRepository estabelecimentoRepository) {
+            BuscadorTenant buscador) {
         this.repository = repository;
-        this.estabelecimentoRepository = estabelecimentoRepository;
+        this.buscador = buscador;
     }
 
     @Override
@@ -37,8 +37,7 @@ public class ConfiguracaoIntegracaoServiceImpl implements ConfiguracaoIntegracao
     public ConfiguracaoIntegracaoResponse salvar(
             UUID estabelecimentoId,
             SalvarConfiguracaoIntegracaoRequest request) {
-        Estabelecimento estabelecimento = estabelecimentoRepository.findById(estabelecimentoId)
-                .orElseThrow(() -> EntidadeNaoEncontradaException.porId(Estabelecimento.class, estabelecimentoId));
+        Estabelecimento estabelecimento = buscador.estabelecimentoAtivo(estabelecimentoId);
 
         ConfiguracaoIntegracao configuracao = repository
                 .findByEstabelecimentoIdAndProvedor(estabelecimentoId, request.provedor())

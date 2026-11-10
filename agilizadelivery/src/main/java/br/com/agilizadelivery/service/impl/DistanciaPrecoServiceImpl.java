@@ -17,21 +17,21 @@ import br.com.agilizadelivery.entity.model.Estabelecimento;
 import br.com.agilizadelivery.exception.EntidadeNaoEncontradaException;
 import br.com.agilizadelivery.exception.FaixaPrecoInvalidaException;
 import br.com.agilizadelivery.repository.DistanciaPrecoRepository;
-import br.com.agilizadelivery.repository.EstabelecimentoRepository;
 import br.com.agilizadelivery.service.DistanciaPrecoService;
+import br.com.agilizadelivery.service.support.BuscadorTenant;
 
 @Service
 @Transactional(readOnly = true)
 public class DistanciaPrecoServiceImpl implements DistanciaPrecoService {
 
     private final DistanciaPrecoRepository repository;
-    private final EstabelecimentoRepository estabelecimentoRepository;
+    private final BuscadorTenant buscador;
 
     public DistanciaPrecoServiceImpl(
             DistanciaPrecoRepository repository,
-            EstabelecimentoRepository estabelecimentoRepository) {
+            BuscadorTenant buscador) {
         this.repository = repository;
-        this.estabelecimentoRepository = estabelecimentoRepository;
+        this.buscador = buscador;
     }
 
     @Override
@@ -39,8 +39,7 @@ public class DistanciaPrecoServiceImpl implements DistanciaPrecoService {
     public List<DistanciaPrecoResponse> substituirTabela(
             UUID estabelecimentoId,
             List<SalvarDistanciaPrecoRequest> faixas) {
-        Estabelecimento estabelecimento = estabelecimentoRepository.findById(estabelecimentoId)
-                .orElseThrow(() -> EntidadeNaoEncontradaException.porId(Estabelecimento.class, estabelecimentoId));
+        Estabelecimento estabelecimento = buscador.estabelecimentoAtivo(estabelecimentoId);
 
         List<SalvarDistanciaPrecoRequest> ordenadas = validarEOrdenar(faixas);
         List<DistanciaPreco> existentes = repository

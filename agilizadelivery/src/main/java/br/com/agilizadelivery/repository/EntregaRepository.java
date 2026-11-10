@@ -1,13 +1,16 @@
 package br.com.agilizadelivery.repository;
 
 import java.time.LocalDateTime;
+import java.util.Collection;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 
 import br.com.agilizadelivery.entity.model.Entrega;
+import br.com.agilizadelivery.entity.model.enums.StatusEntrega;
 
 /**
  * EntregaRepository
@@ -31,4 +34,27 @@ public interface EntregaRepository extends JpaRepository<Entrega, UUID> {
 
     @Query ("SELECT COUNT(e) FROM Entrega e INNER JOIN LoteEntrega l ON e.lote.id = l.id INNER JOIN Motoboy m ON l.motoboy.id = m.id WHERE l.motoboy.id = :motoboyId AND e.pendenteRevisao = true AND e.finalizadaEm BETWEEN :dataInicio AND :dataFim")
     List<Entrega> countEntregasPendentesPorMotoboy(UUID motoboyId, LocalDateTime dataInicio, LocalDateTime dataFim);
+
+    Optional<Entrega> findByIdAndEstabelecimentoId(UUID id, UUID estabelecimentoId);
+
+    List<Entrega> findByEstabelecimentoIdAndStatusOrderByCriadoEmAsc(UUID estabelecimentoId, StatusEntrega status);
+
+    /** Pendentes aptas ao mapa de despacho: sem revisao em aberto (HU01). */
+    List<Entrega> findByEstabelecimentoIdAndStatusAndPendenteRevisaoFalseOrderByCriadoEmAsc(
+            UUID estabelecimentoId,
+            StatusEntrega status);
+
+    List<Entrega> findByEstabelecimentoIdAndIdIn(UUID estabelecimentoId, Collection<UUID> ids);
+
+    /** Entregas de um lote na ordem da rota definida pelo operador. */
+    List<Entrega> findByLoteIdOrderByOrdemRotaAsc(UUID loteId);
+
+    List<Entrega> findByReciboId(UUID reciboId);
+
+    /** Entregas finalizadas por um entregador no periodo (UC03 e UC08). */
+    List<Entrega> findByEstabelecimentoIdAndLoteMotoboyIdAndFinalizadaEmBetweenOrderByFinalizadaEmAsc(
+            UUID estabelecimentoId,
+            UUID motoboyId,
+            LocalDateTime inicio,
+            LocalDateTime fim);
 }
