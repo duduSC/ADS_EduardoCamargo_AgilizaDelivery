@@ -23,6 +23,7 @@ Eduardo dos Santos de Camargo
 | 2.8 | ENTREGA troca `saiu_para_entrega_em` por `pronto_para_despacho_em`, marcado pelo operador quando a cozinha conclui o pedido. Sem esse dado a métrica de aceleração do despacho (seção 1.2.3) não era calculável. O horário da saída permanece rastreável pelo ENTREGA_STATUS_HISTORICO, e o status EM_ROTA é mantido | Eduardo S.C | 07/10/2026 |
 | 2.9 | Ajuste manual de repasse passa a exigir que a entrega esteja fora de recibo: para corrigir uma entrega já vinculada, o operador cancela o recibo antes (UC03 A1, HU07, seção 1.5.5 passo 6, dicionário de ENTREGA). `pendente_revisao` passa a ter apenas duas origens: falha da Google Maps Platform (geocodificação ou rota) e contestação do entregador | Eduardo S.C | 09/11/2026 |
 | 3.0 | Alinhamento com o código após a revisão do backend (T001): `provedor` passa a ser `VARCHAR(20)` também em CONFIGURACAO_INTEGRACAO (antes ENUM), igualando-o a PEDIDO_EXTERNO, com os valores aceitos validados pela aplicação; ENTREGA ganha `ordem_rota` (ordem definida pelo operador no lote); Spring Boot passa de 3.x para 4.x (versão em uso no projeto) | Eduardo S.C | 10/11/2026 |
+| 3.1 | O Administrador do Restaurante passa a poder executar os casos de uso do Operador de Logística (UC01, UC03, UC04) no seu estabelecimento; o Operador continua sem acesso ao UC05. Tabela de casos de uso atualizada, com nota de acesso | Eduardo S.C | 10/11/2026 |
 
 ---
 
@@ -256,16 +257,18 @@ O diagrama apresentado abaixo contempla todos os casos de uso definidos para a s
 
 | Caso de uso | Ator principal | Atores secundários |
 | ----- | ----- | ----- |
-| UC01 – Gerenciar Fluxo de Entregas | Operador de Logística | Sistema Externo (iFood) |
+| UC01 – Gerenciar Fluxo de Entregas | Operador de Logística | Administrador do Restaurante, Sistema Externo (iFood) |
 | UC02 – Executar Lote de Entrega | Entregador | — |
 | UC03 – Fechar Acerto Financeiro | Operador de Logística | Administrador do Restaurante |
-| UC04 – Monitorar Logística em Tempo Real | Operador de Logística | — |
+| UC04 – Monitorar Logística em Tempo Real | Operador de Logística | Administrador do Restaurante |
 | UC05 – Configurar Estabelecimento e Frota | Administrador do Restaurante | — |
 | UC06 – Gerenciar Restaurantes | Administrador Geral | — |
 | UC07 – Autenticar-se | Administrador Geral, Administrador do Restaurante, Operador de Logística, Entregador | — |
 | UC08 – Acompanhar Acerto | Entregador | Operador de Logística |
 
 > O UC07 é incluído (*include*) por todos os demais casos de uso, que o têm como pré-condição.
+
+> **Acesso do Administrador do Restaurante:** além do UC05, o Administrador do Restaurante pode executar os casos de uso do Operador de Logística (UC01, UC03 e UC04) no seu próprio estabelecimento. O Operador de Logística não acessa o UC05. A reabertura de caixa fechado é exclusiva do Administrador do Restaurante.
 
 ### 1.4.2. Descrição dos Casos de Uso
 
