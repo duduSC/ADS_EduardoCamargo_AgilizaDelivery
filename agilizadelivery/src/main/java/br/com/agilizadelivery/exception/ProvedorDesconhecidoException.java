@@ -14,6 +14,9 @@ import br.com.agilizadelivery.exception.handler.CodigoErro;
  *
  * Mapeada para HTTP 400 (Bad Request) com DADOS_INVALIDOS, o mesmo codigo
  * que o Bean Validation usa para um campo com valor invalido.
+ *
+ * PROVISORIO: o DVP nao fixa o codigo de erro para provedor desconhecido;
+ * DADOS_INVALIDOS foi escolhido na T002 por ser valor de entrada invalido.
  */
 public class ProvedorDesconhecidoException extends AgilizaException {
 
