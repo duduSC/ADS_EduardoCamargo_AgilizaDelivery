@@ -3,10 +3,6 @@ package br.com.agilizadelivery.service;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.mockito.AdditionalAnswers.returnsFirstArg;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
@@ -18,21 +14,19 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
-import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.security.crypto.password.PasswordEncoder;
 
 import br.com.agilizadelivery.dto.request.CriarUsuarioRequest;
 import br.com.agilizadelivery.dto.response.UsuarioResponse;
 import br.com.agilizadelivery.entity.model.Estabelecimento;
 import br.com.agilizadelivery.entity.model.Usuario;
 import br.com.agilizadelivery.entity.model.enums.PerfilUsuario;
-import br.com.agilizadelivery.exception.EmailJaCadastradoException;
 import br.com.agilizadelivery.exception.RegraDeNegocioException;
 import br.com.agilizadelivery.repository.UsuarioRepository;
 import br.com.agilizadelivery.service.impl.UsuarioServiceImpl;
 import br.com.agilizadelivery.service.support.BuscadorTenant;
+import br.com.agilizadelivery.service.support.CadastroUsuario;
 
 @ExtendWith(MockitoExtension.class)
 class UsuarioServiceTest {
@@ -44,34 +38,30 @@ class UsuarioServiceTest {
     private BuscadorTenant buscador;
 
     @Mock
-    private PasswordEncoder passwordEncoder;
+    private CadastroUsuario cadastroUsuario;
 
     private UsuarioService service;
     private Estabelecimento estabelecimento;
 
     @BeforeEach
     void setUp() {
-        service = new UsuarioServiceImpl(repository, buscador, passwordEncoder);
+        service = new UsuarioServiceImpl(repository, buscador, cadastroUsuario);
         estabelecimento = Fixtures.estabelecimento();
     }
 
     @Test
-    @DisplayName("Deve criar operador com e-mail normalizado e senha em hash BCrypt (RNF02)")
+    @DisplayName("Deve criar operador na loja ativa")
     void deveCriarUsuario() {
+        Usuario operador = Fixtures.usuario(estabelecimento, PerfilUsuario.OPERADOR);
         when(buscador.estabelecimentoAtivo(estabelecimento.getId())).thenReturn(estabelecimento);
-        when(repository.existsByLoginEmail("ana@forno.com")).thenReturn(false);
-        when(passwordEncoder.encode("senha-segura")).thenReturn("$2a$10$hash");
-        when(repository.save(any(Usuario.class))).then(returnsFirstArg());
+        when(cadastroUsuario.criar(estabelecimento, "Ana", "ana@forno.com", "senha-segura", PerfilUsuario.OPERADOR))
+                .thenReturn(operador);
 
         UsuarioResponse criado = service.criar(estabelecimento.getId(),
-                new CriarUsuarioRequest("Ana", " Ana@Forno.com ", "senha-segura", PerfilUsuario.OPERADOR));
+                new CriarUsuarioRequest("Ana", "ana@forno.com", "senha-segura", PerfilUsuario.OPERADOR));
 
-        ArgumentCaptor<Usuario> salvo = ArgumentCaptor.forClass(Usuario.class);
-        verify(repository).save(salvo.capture());
-        assertEquals("$2a$10$hash", salvo.getValue().getSenhaHash());
-        assertEquals("ana@forno.com", criado.loginEmail());
+        assertEquals(operador.getId(), criado.id());
         assertEquals(estabelecimento.getId(), criado.estabelecimentoId());
-        assertEquals(PerfilUsuario.OPERADOR, criado.perfil());
     }
 
     @ParameterizedTest
@@ -80,18 +70,7 @@ class UsuarioServiceTest {
     void deveRecusarPerfil(PerfilUsuario perfil) {
         assertThrows(RegraDeNegocioException.class, () -> service.criar(estabelecimento.getId(),
                 new CriarUsuarioRequest("X", "x@x.com", "senha-segura", perfil)));
-        verifyNoInteractions(repository);
-    }
-
-    @Test
-    @DisplayName("Deve recusar e-mail já cadastrado")
-    void deveRecusarEmailDuplicado() {
-        when(buscador.estabelecimentoAtivo(estabelecimento.getId())).thenReturn(estabelecimento);
-        when(repository.existsByLoginEmail("ana@forno.com")).thenReturn(true);
-
-        assertThrows(EmailJaCadastradoException.class, () -> service.criar(estabelecimento.getId(),
-                new CriarUsuarioRequest("Ana", "ana@forno.com", "senha-segura", PerfilUsuario.OPERADOR)));
-        verify(repository, never()).save(any());
+        verifyNoInteractions(cadastroUsuario);
     }
 
     @Test

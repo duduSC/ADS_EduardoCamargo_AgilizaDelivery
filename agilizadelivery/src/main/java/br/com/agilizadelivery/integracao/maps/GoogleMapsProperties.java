@@ -7,11 +7,19 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 /**
  * Configuracao do acesso a Google Maps Platform (Routes e Geocoding).
  *
+ * cacheTamanho limita quantos enderecos e distancias ficam em memoria
+ * para evitar consultas repetidas (risco R06).
+ *
  * A chave pertence a aplicacao e vem do ambiente (GOOGLE_MAPS_API_KEY),
  * nunca do banco nem do repositorio.
  */
 @ConfigurationProperties(prefix = "agiliza.maps")
-public record GoogleMapsProperties(String apiKey, String routesUrl, String geocodingUrl, Duration timeout) {
+public record GoogleMapsProperties(
+        String apiKey,
+        String routesUrl,
+        String geocodingUrl,
+        Duration timeout,
+        Integer cacheTamanho) {
 
     public static final String ROUTES_URL_PADRAO = "https://routes.googleapis.com/directions/v2:computeRoutes";
     public static final String GEOCODING_URL_PADRAO = "https://maps.googleapis.com/maps/api/geocode/json";
@@ -25,6 +33,9 @@ public record GoogleMapsProperties(String apiKey, String routesUrl, String geoco
         }
         if (timeout == null) {
             timeout = Duration.ofSeconds(5);
+        }
+        if (cacheTamanho == null || cacheTamanho < 1) {
+            cacheTamanho = 1000;
         }
     }
 

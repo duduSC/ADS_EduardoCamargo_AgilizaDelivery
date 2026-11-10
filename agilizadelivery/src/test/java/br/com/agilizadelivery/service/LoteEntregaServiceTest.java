@@ -7,7 +7,6 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.AdditionalAnswers.returnsFirstArg;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -21,21 +20,17 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import br.com.agilizadelivery.dto.request.DespacharLoteRequest;
-import br.com.agilizadelivery.dto.request.SugerirRotaRequest;
 import br.com.agilizadelivery.dto.response.LoteEntregaResponse;
 import br.com.agilizadelivery.dto.response.ParadaRotaResponse;
 import br.com.agilizadelivery.dto.response.RotaLoteResponse;
-import br.com.agilizadelivery.dto.response.SugestaoRotaResponse;
 import br.com.agilizadelivery.entity.model.Entrega;
 import br.com.agilizadelivery.entity.model.Estabelecimento;
 import br.com.agilizadelivery.entity.model.LoteEntrega;
 import br.com.agilizadelivery.entity.model.Motoboy;
-import br.com.agilizadelivery.entity.model.SugestaoRota;
 import br.com.agilizadelivery.entity.model.Usuario;
 import br.com.agilizadelivery.entity.model.enums.MotivoRevisao;
 import br.com.agilizadelivery.entity.model.enums.PerfilUsuario;
@@ -54,11 +49,7 @@ import br.com.agilizadelivery.repository.EntregaRepository;
 import br.com.agilizadelivery.repository.EntregaStatusHistoricoRepository;
 import br.com.agilizadelivery.repository.LoteEntregaRepository;
 import br.com.agilizadelivery.repository.MotoboyRepository;
-import br.com.agilizadelivery.repository.SugestaoRotaRepository;
 import br.com.agilizadelivery.service.impl.LoteEntregaServiceImpl;
-import br.com.agilizadelivery.service.rota.PontoRota;
-import br.com.agilizadelivery.service.rota.RotaCalculada;
-import br.com.agilizadelivery.service.rota.ServicoDeRotas;
 import br.com.agilizadelivery.service.support.BuscadorTenant;
 import br.com.agilizadelivery.service.support.TransicaoEntrega;
 
@@ -75,16 +66,10 @@ class LoteEntregaServiceTest {
     private MotoboyRepository motoboyRepository;
 
     @Mock
-    private SugestaoRotaRepository sugestaoRepository;
-
-    @Mock
     private EntregaStatusHistoricoRepository historicoRepository;
 
     @Mock
     private BuscadorTenant buscador;
-
-    @Mock
-    private ServicoDeRotas rotas;
 
     private LoteEntregaService service;
     private Estabelecimento estabelecimento;
@@ -97,8 +82,8 @@ class LoteEntregaServiceTest {
 
     @BeforeEach
     void setUp() {
-        service = new LoteEntregaServiceImpl(repository, entregaRepository, motoboyRepository, sugestaoRepository,
-                buscador, rotas, new TransicaoEntrega(historicoRepository));
+        service = new LoteEntregaServiceImpl(repository, entregaRepository, motoboyRepository,
+                buscador, new TransicaoEntrega(historicoRepository));
         estabelecimento = Fixtures.estabelecimento();
         estabelecimentoId = estabelecimento.getId();
         motoboy = Fixtures.motoboy(estabelecimento);
@@ -143,26 +128,19 @@ class LoteEntregaServiceTest {
     }
 
     @Test
-    @DisplayName("Deve despachar seguindo a rota do operador (B, C, A) sem alterar o repasse de cada entrega")
+    @DisplayName("Deve despachar na ordem de paradas do operador (B, C, A) sem alterar o repasse de cada entrega")
     void deveDespacharNaOrdemDoOperador() {
         prepararDespacho(List.of(a, b, c));
-        when(rotas.calcularRota(any(), anyList()))
-                .thenReturn(Optional.of(new RotaCalculada(reais("8.45"), List.of())));
 
         LoteEntregaResponse lote = service.despachar(estabelecimentoId, operador.getId(), rota(b, c, a));
 
         assertEquals((short) 1, b.getOrdemRota());
         assertEquals((short) 2, c.getOrdemRota());
         assertEquals((short) 3, a.getOrdemRota());
-        @SuppressWarnings("unchecked")
-        ArgumentCaptor<List<PontoRota>> paradas = ArgumentCaptor.forClass(List.class);
-        verify(rotas).calcularRota(any(), paradas.capture());
-        assertEquals(List.of(PontoRota.de(b), PontoRota.de(c), PontoRota.de(a)), paradas.getValue());
 
         assertEquals(StatusLote.DESPACHADO, lote.status());
         assertEquals((short) 3, lote.qtdEntregas());
         assertEquals(reais("30.00"), lote.valorTotalRepasse());
-        assertEquals(reais("8.45"), lote.distanciaRotaKm());
         assertEquals(reais("12.00"), b.getValorRepasse());
         List.of(a, b, c).forEach(entrega -> {
             assertEquals(StatusEntrega.DESPACHADA, entrega.getStatus());
@@ -170,18 +148,6 @@ class LoteEntregaServiceTest {
         });
         assertEquals(StatusDisponibilidadeMotoboy.EM_ROTA, motoboy.getStatusDisponibilidade());
         verify(motoboyRepository).save(motoboy);
-    }
-
-    @Test
-    @DisplayName("Deve despachar mesmo sem a distância da rota quando a Routes API falha")
-    void deveDespacharSemDistanciaDaRota() {
-        prepararDespacho(List.of(a));
-        when(rotas.calcularRota(any(), anyList())).thenReturn(Optional.empty());
-
-        LoteEntregaResponse lote = service.despachar(estabelecimentoId, operador.getId(), rota(a));
-
-        assertNull(lote.distanciaRotaKm());
-        assertEquals(StatusEntrega.DESPACHADA, a.getStatus());
     }
 
     @Test
@@ -291,97 +257,23 @@ class LoteEntregaServiceTest {
     @DisplayName("Deve expor a rota principal na ordem das paradas")
     void deveBuscarRota() {
         LoteEntrega lote = loteComRotaBCA(StatusLote.EM_ROTA, StatusEntrega.EM_ROTA);
-        lote.setDistanciaRotaKm(reais("8.45"));
 
         RotaLoteResponse rota = service.buscarRota(estabelecimentoId, lote.getId());
 
         assertEquals(List.of("B", "C", "A"), rota.paradas().stream().map(ParadaRotaResponse::nomeCliente).toList());
         assertEquals(List.of((short) 1, (short) 2, (short) 3),
                 rota.paradas().stream().map(ParadaRotaResponse::ordem).toList());
-        assertEquals(reais("8.45"), rota.distanciaRotaKm());
         assertNotNull(rota.origem());
     }
 
     @Test
-    @DisplayName("Deve registrar a sugestão do entregador sem mudar a rota oficial nem o repasse")
-    void deveRegistrarSugestaoSemAlterarRota() {
-        LoteEntrega lote = loteComRotaBCA(StatusLote.EM_ROTA, StatusEntrega.EM_ROTA);
-        when(rotas.calcularRota(any(), anyList()))
-                .thenReturn(Optional.of(new RotaCalculada(reais("7.90"), List.of())));
-        when(sugestaoRepository.save(any(SugestaoRota.class))).then(returnsFirstArg());
-
-        SugestaoRotaResponse sugestao = service.sugerirRota(estabelecimentoId, lote.getId(), motoboy.getId(),
-                new SugerirRotaRequest(List.of(a.getId(), b.getId(), c.getId()), "Trânsito na avenida"));
-
-        assertEquals(List.of(a.getId(), b.getId(), c.getId()), sugestao.entregaIds());
-        assertEquals(reais("7.90"), sugestao.distanciaSugeridaKm());
-        assertEquals("Trânsito na avenida", sugestao.observacao());
-        assertEquals((short) 1, b.getOrdemRota());
-        assertEquals((short) 3, a.getOrdemRota());
-        assertEquals(reais("9.00"), a.getValorRepasse());
-        verify(entregaRepository, never()).saveAll(any());
-        verify(repository, never()).save(any());
-    }
-
-    @Test
-    @DisplayName("Deve exigir na sugestão exatamente as entregas pendentes, em ordem diferente da atual")
-    void deveValidarSugestao() {
-        LoteEntrega lote = loteComRotaBCA(StatusLote.EM_ROTA, StatusEntrega.EM_ROTA);
-
-        assertThrows(RegraDeNegocioException.class, () -> service.sugerirRota(estabelecimentoId, lote.getId(),
-                motoboy.getId(), new SugerirRotaRequest(List.of(a.getId(), b.getId()), null)));
-        assertThrows(RegraDeNegocioException.class, () -> service.sugerirRota(estabelecimentoId, lote.getId(),
-                motoboy.getId(), new SugerirRotaRequest(List.of(b.getId(), c.getId(), a.getId()), null)));
-        assertThrows(RegraDeNegocioException.class, () -> service.sugerirRota(estabelecimentoId, lote.getId(),
-                motoboy.getId(), new SugerirRotaRequest(List.of(a.getId(), a.getId(), b.getId()), null)));
-        verify(sugestaoRepository, never()).save(any());
-    }
-
-    @Test
-    @DisplayName("Deve considerar apenas as entregas ainda não finalizadas na sugestão")
-    void deveIgnorarEntregasFinalizadasNaSugestao() {
-        LoteEntrega lote = loteComRotaBCA(StatusLote.EM_ROTA, StatusEntrega.EM_ROTA);
-        b.setStatus(StatusEntrega.ENTREGUE);
-        when(rotas.calcularRota(any(), anyList())).thenReturn(Optional.empty());
-        when(sugestaoRepository.save(any(SugestaoRota.class))).then(returnsFirstArg());
-
-        SugestaoRotaResponse sugestao = service.sugerirRota(estabelecimentoId, lote.getId(), motoboy.getId(),
-                new SugerirRotaRequest(List.of(a.getId(), c.getId()), null));
-
-        assertEquals(List.of(a.getId(), c.getId()), sugestao.entregaIds());
-        assertNull(sugestao.distanciaSugeridaKm());
-    }
-
-    @Test
-    @DisplayName("Deve recusar sugestão de outro entregador ou para lote encerrado")
-    void deveRecusarSugestaoIndevida() {
-        LoteEntrega lote = loteComRotaBCA(StatusLote.EM_ROTA, StatusEntrega.EM_ROTA);
-        SugerirRotaRequest request = new SugerirRotaRequest(List.of(a.getId(), b.getId(), c.getId()), null);
-
-        assertThrows(AcessoNegadoException.class, () ->
-                service.sugerirRota(estabelecimentoId, lote.getId(), UUID.randomUUID(), request));
-
-        lote.setStatus(StatusLote.CONCLUIDO);
-        assertThrows(RegraDeNegocioException.class, () ->
-                service.sugerirRota(estabelecimentoId, lote.getId(), motoboy.getId(), request));
-    }
-
-    @Test
-    @DisplayName("Deve listar as sugestões do lote e consultar lotes da loja")
+    @DisplayName("Deve consultar lotes da loja")
     void deveConsultar() {
         LoteEntrega lote = loteComRotaBCA(StatusLote.EM_ROTA, StatusEntrega.EM_ROTA);
-        SugestaoRota sugestao = new SugestaoRota();
-        sugestao.setId(1L);
-        sugestao.setLote(lote);
-        sugestao.setMotoboy(motoboy);
-        sugestao.getOrdemEntregas().addAll(List.of(a.getId(), b.getId(), c.getId()));
-        when(sugestaoRepository.findByLoteEstabelecimentoIdAndLoteIdOrderBySugeridaEmAsc(estabelecimentoId, lote.getId()))
-                .thenReturn(List.of(sugestao));
         when(repository.findByEstabelecimentoIdAndStatus(estabelecimentoId, StatusLote.EM_ROTA)).thenReturn(List.of(lote));
         when(repository.findByEstabelecimentoIdAndMotoboyIdAndStatus(estabelecimentoId, motoboy.getId(), StatusLote.EM_ROTA))
                 .thenReturn(List.of(lote));
 
-        assertEquals(1L, service.listarSugestoes(estabelecimentoId, lote.getId()).getFirst().id());
         assertEquals(lote.getId(), service.buscarPorId(estabelecimentoId, lote.getId()).id());
         assertEquals(1, service.listarPorEstabelecimentoEStatus(estabelecimentoId, StatusLote.EM_ROTA).size());
         assertEquals(1, service.listarPorMotoboy(estabelecimentoId, motoboy.getId(), StatusLote.EM_ROTA).size());

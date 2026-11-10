@@ -6,6 +6,7 @@ import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import java.util.Arrays;
 import java.util.Base64;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -15,6 +16,8 @@ import org.junit.jupiter.api.Test;
 class AesGcmProtetorCpfTest {
 
     private static final String CHAVE_32 = Base64.getEncoder().encodeToString(new byte[32]);
+    private static final int TAMANHO_IV = 12;
+    private static final int TAMANHO_TAG = 16;
 
     private AesGcmProtetorCpf protetor;
 
@@ -26,15 +29,18 @@ class AesGcmProtetorCpfTest {
     }
 
     @Test
-    @DisplayName("Deve cifrar com IV aleatório e decifrar o CPF normalizado")
-    void deveCifrarEDecifrar() {
+    @DisplayName("Deve cifrar o CPF normalizado com IV aleatório, sem expô-lo em claro")
+    void deveCifrar() {
         String primeiro = protetor.cifrar("123.456.789-09");
         String segundo = protetor.cifrar("12345678909");
 
         assertNotEquals(primeiro, segundo);
         assertFalse(primeiro.contains("12345678909"));
-        assertEquals("12345678909", protetor.decifrar(primeiro));
-        assertEquals("12345678909", protetor.decifrar(segundo));
+        byte[] bytesPrimeiro = Base64.getDecoder().decode(primeiro);
+        byte[] bytesSegundo = Base64.getDecoder().decode(segundo);
+        assertEquals(TAMANHO_IV + 11 + TAMANHO_TAG, bytesPrimeiro.length);
+        assertFalse(Arrays.equals(
+                Arrays.copyOf(bytesPrimeiro, TAMANHO_IV), Arrays.copyOf(bytesSegundo, TAMANHO_IV)));
     }
 
     @Test
@@ -56,15 +62,5 @@ class AesGcmProtetorCpfTest {
         assertThrows(IllegalStateException.class, () -> new AesGcmProtetorCpf(new CpfProperties(null, CHAVE_32)));
         assertThrows(IllegalStateException.class, () -> new AesGcmProtetorCpf(new CpfProperties(curta, CHAVE_32)));
         assertThrows(IllegalStateException.class, () -> new AesGcmProtetorCpf(new CpfProperties(CHAVE_32, curta)));
-    }
-
-    @Test
-    @DisplayName("Deve falhar ao decifrar valor adulterado")
-    void deveDetectarAdulteracao() {
-        byte[] cifrado = Base64.getDecoder().decode(protetor.cifrar("12345678909"));
-        cifrado[cifrado.length - 1] ^= 1;
-
-        assertThrows(IllegalStateException.class, () ->
-                protetor.decifrar(Base64.getEncoder().encodeToString(cifrado)));
     }
 }

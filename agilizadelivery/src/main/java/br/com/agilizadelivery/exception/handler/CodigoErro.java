@@ -47,6 +47,7 @@ public enum CodigoErro {
     PEDIDO_JA_IMPORTADO,
 
     // 403 / 401 - Seguranca e Multilocacao
+    CREDENCIAIS_INVALIDAS,
     ACESSO_NEGADO,
     ESTABELECIMENTO_INATIVO,
     USUARIO_BLOQUEADO,

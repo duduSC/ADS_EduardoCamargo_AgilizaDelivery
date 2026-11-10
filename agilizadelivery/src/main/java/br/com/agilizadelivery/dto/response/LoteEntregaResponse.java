@@ -14,7 +14,6 @@ public record LoteEntregaResponse(
         StatusLote status,
         Short qtdEntregas,
         BigDecimal valorTotalRepasse,
-        BigDecimal distanciaRotaKm,
         LocalDateTime despachadoEm,
         LocalDateTime concluidoEm,
         LocalDateTime criadoEm,

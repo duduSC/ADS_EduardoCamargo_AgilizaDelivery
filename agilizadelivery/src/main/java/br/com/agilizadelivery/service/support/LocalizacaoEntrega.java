@@ -8,7 +8,6 @@ import org.springframework.stereotype.Component;
 import br.com.agilizadelivery.entity.model.Entrega;
 import br.com.agilizadelivery.entity.model.embeddable.Coordenada;
 import br.com.agilizadelivery.entity.model.enums.MotivoRevisao;
-import br.com.agilizadelivery.service.rota.PontoRota;
 import br.com.agilizadelivery.service.rota.ServicoDeGeocodificacao;
 import br.com.agilizadelivery.service.rota.ServicoDeRotas;
 
@@ -49,8 +48,8 @@ public class LocalizacaoEntrega {
         }
 
         Optional<BigDecimal> distancia = rotas.distanciaKm(
-                PontoRota.de(entrega.getEstabelecimento()),
-                PontoRota.de(entrega));
+                entrega.getEstabelecimento().getCoordenada(),
+                entrega.getCoordenada());
         if (distancia.isEmpty()) {
             marcarRevisao(entrega, MotivoRevisao.SEM_DISTANCIA);
             return;

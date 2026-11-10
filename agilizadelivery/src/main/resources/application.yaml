@@ -15,6 +15,7 @@ agiliza:
     routes-url: https://routes.googleapis.com/directions/v2:computeRoutes
     geocoding-url: https://maps.googleapis.com/maps/api/geocode/json
     timeout: 5s
+    cache-tamanho: 1000
   seguranca:
     cpf:
       chave-cifra: ${AGILIZA_CPF_CHAVE_CIFRA:}

@@ -5,7 +5,6 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
 
-import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -15,22 +14,20 @@ import br.com.agilizadelivery.dto.request.CriarMotoboyRequest;
 import br.com.agilizadelivery.dto.response.MotoboyResponse;
 import br.com.agilizadelivery.entity.model.Estabelecimento;
 import br.com.agilizadelivery.entity.model.Motoboy;
-import br.com.agilizadelivery.entity.model.Usuario;
 import br.com.agilizadelivery.entity.model.enums.PerfilUsuario;
 import br.com.agilizadelivery.entity.model.enums.StatusCadastroMotoboy;
 import br.com.agilizadelivery.entity.model.enums.StatusDisponibilidadeMotoboy;
 import br.com.agilizadelivery.entity.model.enums.StatusEstabelecimento;
 import br.com.agilizadelivery.exception.CpfJaCadastradoException;
-import br.com.agilizadelivery.exception.EmailJaCadastradoException;
 import br.com.agilizadelivery.exception.EstabelecimentoInativoException;
 import br.com.agilizadelivery.exception.MotoboyIndisponivelException;
 import br.com.agilizadelivery.exception.RegraDeNegocioException;
 import br.com.agilizadelivery.exception.TransicaoEstadoInvalidaException;
 import br.com.agilizadelivery.repository.MotoboyRepository;
-import br.com.agilizadelivery.repository.UsuarioRepository;
 import br.com.agilizadelivery.service.MotoboyService;
 import br.com.agilizadelivery.service.seguranca.ProtetorCpf;
 import br.com.agilizadelivery.service.support.BuscadorTenant;
+import br.com.agilizadelivery.service.support.CadastroUsuario;
 import br.com.agilizadelivery.service.support.Coordenadas;
 
 /**
@@ -44,21 +41,18 @@ import br.com.agilizadelivery.service.support.Coordenadas;
 public class MotoboyServiceImpl implements MotoboyService {
 
     private final MotoboyRepository repository;
-    private final UsuarioRepository usuarioRepository;
     private final BuscadorTenant buscador;
-    private final PasswordEncoder passwordEncoder;
+    private final CadastroUsuario cadastroUsuario;
     private final ProtetorCpf protetorCpf;
 
     public MotoboyServiceImpl(
             MotoboyRepository repository,
-            UsuarioRepository usuarioRepository,
             BuscadorTenant buscador,
-            PasswordEncoder passwordEncoder,
+            CadastroUsuario cadastroUsuario,
             ProtetorCpf protetorCpf) {
         this.repository = repository;
-        this.usuarioRepository = usuarioRepository;
         this.buscador = buscador;
-        this.passwordEncoder = passwordEncoder;
+        this.cadastroUsuario = cadastroUsuario;
         this.protetorCpf = protetorCpf;
     }
 
@@ -67,25 +61,14 @@ public class MotoboyServiceImpl implements MotoboyService {
     @Transactional
     public MotoboyResponse criar(UUID estabelecimentoId, CriarMotoboyRequest request) {
         Estabelecimento estabelecimento = buscador.estabelecimentoAtivo(estabelecimentoId);
-        String email = request.loginEmail().trim().toLowerCase();
-        if (usuarioRepository.existsByLoginEmail(email)) {
-            throw new EmailJaCadastradoException(email);
-        }
         String cpfHash = protetorCpf.hash(request.cpf());
         if (Boolean.TRUE.equals(repository.existsByCpfHash(cpfHash))) {
             throw new CpfJaCadastradoException();
         }
 
-        Usuario usuario = new Usuario();
-        usuario.setEstabelecimento(estabelecimento);
-        usuario.setNome(request.nome().trim());
-        usuario.setLoginEmail(email);
-        usuario.setSenhaHash(passwordEncoder.encode(request.senha()));
-        usuario.setPerfil(PerfilUsuario.ENTREGADOR);
-        usuario.setAtivo(true);
-
         Motoboy motoboy = new Motoboy();
-        motoboy.setUsuario(usuarioRepository.save(usuario));
+        motoboy.setUsuario(cadastroUsuario.criar(
+                estabelecimento, request.nome(), request.loginEmail(), request.senha(), PerfilUsuario.ENTREGADOR));
         motoboy.setCpfCriptografado(protetorCpf.cifrar(request.cpf()));
         motoboy.setCpfHash(cpfHash);
         motoboy.setTelefone(request.telefone());

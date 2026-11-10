@@ -4,9 +4,6 @@ import java.math.BigDecimal;
 import java.util.List;
 import java.util.Optional;
 
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.client.SimpleClientHttpRequestFactory;
-import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientException;
 import org.springframework.web.util.UriComponentsBuilder;
@@ -24,18 +21,12 @@ import lombok.extern.slf4j.Slf4j;
  * resposta sem resultado) resulta em Optional vazio.
  */
 @Slf4j
-@Component
 public class GoogleGeocodingServicoDeGeocodificacao implements ServicoDeGeocodificacao {
 
     private final GoogleMapsProperties properties;
     private final RestClient restClient;
 
-    @Autowired
-    public GoogleGeocodingServicoDeGeocodificacao(GoogleMapsProperties properties) {
-        this(properties, RestClient.builder().requestFactory(fabricaComTimeout(properties)));
-    }
-
-    GoogleGeocodingServicoDeGeocodificacao(GoogleMapsProperties properties, RestClient.Builder builder) {
+    public GoogleGeocodingServicoDeGeocodificacao(GoogleMapsProperties properties, RestClient.Builder builder) {
         this.properties = properties;
         this.restClient = builder.build();
     }
@@ -83,13 +74,6 @@ public class GoogleGeocodingServicoDeGeocodificacao implements ServicoDeGeocodif
             return Optional.empty();
         }
         return Optional.of(new Coordenada(local.lat(), local.lng()));
-    }
-
-    private static SimpleClientHttpRequestFactory fabricaComTimeout(GoogleMapsProperties properties) {
-        SimpleClientHttpRequestFactory fabrica = new SimpleClientHttpRequestFactory();
-        fabrica.setConnectTimeout(properties.timeout());
-        fabrica.setReadTimeout(properties.timeout());
-        return fabrica;
     }
 
     @JsonIgnoreProperties(ignoreUnknown = true)

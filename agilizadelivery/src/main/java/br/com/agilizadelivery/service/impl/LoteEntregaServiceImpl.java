@@ -1,8 +1,6 @@
 package br.com.agilizadelivery.service.impl;
 
-import java.math.BigDecimal;
 import java.time.LocalDateTime;
-import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -15,15 +13,12 @@ import org.springframework.transaction.annotation.Transactional;
 
 import br.com.agilizadelivery.dto.DtoMapper;
 import br.com.agilizadelivery.dto.request.DespacharLoteRequest;
-import br.com.agilizadelivery.dto.request.SugerirRotaRequest;
 import br.com.agilizadelivery.dto.response.LoteEntregaResponse;
 import br.com.agilizadelivery.dto.response.RotaLoteResponse;
-import br.com.agilizadelivery.dto.response.SugestaoRotaResponse;
 import br.com.agilizadelivery.entity.model.Entrega;
 import br.com.agilizadelivery.entity.model.Estabelecimento;
 import br.com.agilizadelivery.entity.model.LoteEntrega;
 import br.com.agilizadelivery.entity.model.Motoboy;
-import br.com.agilizadelivery.entity.model.SugestaoRota;
 import br.com.agilizadelivery.entity.model.Usuario;
 import br.com.agilizadelivery.entity.model.enums.PerfilUsuario;
 import br.com.agilizadelivery.entity.model.enums.StatusCadastroMotoboy;
@@ -40,11 +35,7 @@ import br.com.agilizadelivery.exception.TransicaoEstadoInvalidaException;
 import br.com.agilizadelivery.repository.EntregaRepository;
 import br.com.agilizadelivery.repository.LoteEntregaRepository;
 import br.com.agilizadelivery.repository.MotoboyRepository;
-import br.com.agilizadelivery.repository.SugestaoRotaRepository;
 import br.com.agilizadelivery.service.LoteEntregaService;
-import br.com.agilizadelivery.service.rota.PontoRota;
-import br.com.agilizadelivery.service.rota.RotaCalculada;
-import br.com.agilizadelivery.service.rota.ServicoDeRotas;
 import br.com.agilizadelivery.service.support.BuscadorTenant;
 import br.com.agilizadelivery.service.support.EncerramentoLote;
 import br.com.agilizadelivery.service.support.TransicaoEntrega;
@@ -52,10 +43,9 @@ import br.com.agilizadelivery.service.support.TransicaoEntrega;
 /**
  * Despacho e execucao dos lotes (UC01, UC02).
  *
- * O operador define a rota principal no despacho: a ordem das entregas
- * informada e a ordem das paradas a partir da loja. O entregador deve
- * segui-la e pode sugerir outra, que e apenas registrada. A rota nao
- * influencia o repasse, apurado por entrega (DVP 1.5.5).
+ * O agrupamento e manual (DVP 1.2.4): o operador escolhe as entregas e
+ * a ordem das paradas, que o entregador segue. A ordem nao influencia o
+ * repasse, apurado por entrega pela distancia loja -> cliente (1.5.5).
  */
 @Service
 @Transactional(readOnly = true)
@@ -64,25 +54,19 @@ public class LoteEntregaServiceImpl implements LoteEntregaService {
     private final LoteEntregaRepository repository;
     private final EntregaRepository entregaRepository;
     private final MotoboyRepository motoboyRepository;
-    private final SugestaoRotaRepository sugestaoRepository;
     private final BuscadorTenant buscador;
-    private final ServicoDeRotas rotas;
     private final TransicaoEntrega transicao;
 
     public LoteEntregaServiceImpl(
             LoteEntregaRepository repository,
             EntregaRepository entregaRepository,
             MotoboyRepository motoboyRepository,
-            SugestaoRotaRepository sugestaoRepository,
             BuscadorTenant buscador,
-            ServicoDeRotas rotas,
             TransicaoEntrega transicao) {
         this.repository = repository;
         this.entregaRepository = entregaRepository;
         this.motoboyRepository = motoboyRepository;
-        this.sugestaoRepository = sugestaoRepository;
         this.buscador = buscador;
-        this.rotas = rotas;
         this.transicao = transicao;
     }
 
@@ -116,7 +100,6 @@ public class LoteEntregaServiceImpl implements LoteEntregaService {
         lote.setStatus(StatusLote.DESPACHADO);
         lote.setQtdEntregas((short) entregas.size());
         lote.setValorTotalRepasse(EncerramentoLote.somarRepasse(entregas));
-        lote.setDistanciaRotaKm(distanciaDaRota(estabelecimento, entregas));
         lote.setDespachadoEm(agora);
         LoteEntrega salvo = repository.save(lote);
 
@@ -215,65 +198,9 @@ public class LoteEntregaServiceImpl implements LoteEntregaService {
         return new RotaLoteResponse(
                 lote.getId(),
                 DtoMapper.toDto(lote.getEstabelecimento().getCoordenada()),
-                lote.getDistanciaRotaKm(),
                 entregaRepository.findByLoteIdOrderByOrdemRotaAsc(lote.getId()).stream()
                         .map(DtoMapper::toParada)
                         .toList());
-    }
-
-    /**
-     * Registra a ordem proposta pelo entregador. A rota oficial e o
-     * repasse permanecem inalterados.
-     */
-    @Override
-    @Transactional
-    public SugestaoRotaResponse sugerirRota(
-            UUID estabelecimentoId,
-            UUID loteId,
-            UUID motoboyId,
-            SugerirRotaRequest request) {
-        LoteEntrega lote = buscar(estabelecimentoId, loteId);
-        exigirDono(lote, motoboyId);
-        if (lote.getStatus() != StatusLote.DESPACHADO && lote.getStatus() != StatusLote.EM_ROTA) {
-            throw new RegraDeNegocioException("Só é possível sugerir rota para um lote despachado ou em rota.");
-        }
-
-        List<UUID> sugerida = request.entregaIds();
-        exigirSemRepeticao(sugerida);
-
-        List<Entrega> pendentes = entregaRepository.findByLoteIdOrderByOrdemRotaAsc(lote.getId()).stream()
-                .filter(entrega -> !entrega.emEstadoFinal())
-                .toList();
-        List<UUID> atual = pendentes.stream().map(Entrega::getId).toList();
-        if (!new HashSet<>(atual).equals(new HashSet<>(sugerida))) {
-            throw new RegraDeNegocioException(
-                    "A sugestão deve conter exatamente as entregas ainda pendentes do lote.");
-        }
-        if (atual.equals(sugerida)) {
-            throw new RegraDeNegocioException("A ordem sugerida é igual à rota atual.");
-        }
-
-        Map<UUID, Entrega> porId = pendentes.stream()
-                .collect(Collectors.toMap(Entrega::getId, Function.identity()));
-        List<Entrega> naOrdemSugerida = sugerida.stream().map(porId::get).toList();
-
-        SugestaoRota sugestao = new SugestaoRota();
-        sugestao.setLote(lote);
-        sugestao.setMotoboy(lote.getMotoboy());
-        sugestao.setOrdemEntregas(new ArrayList<>(sugerida));
-        sugestao.setDistanciaSugeridaKm(distanciaDaRota(lote.getEstabelecimento(), naOrdemSugerida));
-        sugestao.setObservacao(request.observacao());
-        sugestao.setSugeridaEm(LocalDateTime.now());
-        return DtoMapper.toResponse(sugestaoRepository.save(sugestao));
-    }
-
-    @Override
-    public List<SugestaoRotaResponse> listarSugestoes(UUID estabelecimentoId, UUID loteId) {
-        buscar(estabelecimentoId, loteId);
-        return sugestaoRepository.findByLoteEstabelecimentoIdAndLoteIdOrderBySugeridaEmAsc(estabelecimentoId, loteId)
-                .stream()
-                .map(DtoMapper::toResponse)
-                .toList();
     }
 
     private LoteEntrega buscar(UUID estabelecimentoId, UUID loteId) {
@@ -294,12 +221,6 @@ public class LoteEntregaServiceImpl implements LoteEntregaService {
                     return entrega;
                 })
                 .toList();
-    }
-
-    private BigDecimal distanciaDaRota(Estabelecimento estabelecimento, List<Entrega> paradas) {
-        return rotas.calcularRota(PontoRota.de(estabelecimento), paradas.stream().map(PontoRota::de).toList())
-                .map(RotaCalculada::distanciaTotalKm)
-                .orElse(null);
     }
 
     /** Entregador ATIVO e ONLINE (HU02, UC01 E1). */

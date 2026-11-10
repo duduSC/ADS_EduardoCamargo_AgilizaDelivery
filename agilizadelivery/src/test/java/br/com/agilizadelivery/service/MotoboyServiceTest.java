@@ -8,6 +8,7 @@ import static org.mockito.AdditionalAnswers.returnsFirstArg;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import java.util.List;
@@ -19,7 +20,6 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.security.crypto.password.PasswordEncoder;
 
 import br.com.agilizadelivery.dto.request.AlterarDisponibilidadeMotoboyRequest;
 import br.com.agilizadelivery.dto.request.CriarMotoboyRequest;
@@ -38,10 +38,10 @@ import br.com.agilizadelivery.exception.MotoboyIndisponivelException;
 import br.com.agilizadelivery.exception.RegraDeNegocioException;
 import br.com.agilizadelivery.exception.TransicaoEstadoInvalidaException;
 import br.com.agilizadelivery.repository.MotoboyRepository;
-import br.com.agilizadelivery.repository.UsuarioRepository;
 import br.com.agilizadelivery.service.impl.MotoboyServiceImpl;
 import br.com.agilizadelivery.service.seguranca.ProtetorCpf;
 import br.com.agilizadelivery.service.support.BuscadorTenant;
+import br.com.agilizadelivery.service.support.CadastroUsuario;
 
 @ExtendWith(MockitoExtension.class)
 class MotoboyServiceTest {
@@ -50,13 +50,10 @@ class MotoboyServiceTest {
     private MotoboyRepository repository;
 
     @Mock
-    private UsuarioRepository usuarioRepository;
-
-    @Mock
     private BuscadorTenant buscador;
 
     @Mock
-    private PasswordEncoder passwordEncoder;
+    private CadastroUsuario cadastroUsuario;
 
     @Mock
     private ProtetorCpf protetorCpf;
@@ -67,7 +64,7 @@ class MotoboyServiceTest {
 
     @BeforeEach
     void setUp() {
-        service = new MotoboyServiceImpl(repository, usuarioRepository, buscador, passwordEncoder, protetorCpf);
+        service = new MotoboyServiceImpl(repository, buscador, cadastroUsuario, protetorCpf);
         estabelecimento = Fixtures.estabelecimento();
         motoboy = Fixtures.motoboy(estabelecimento);
     }
@@ -85,12 +82,13 @@ class MotoboyServiceTest {
     @DisplayName("Deve cadastrar o entregador gerando usuário ENTREGADOR e CPF cifrado (HU09, RNF02)")
     void deveCriarMotoboy() {
         when(buscador.estabelecimentoAtivo(estabelecimento.getId())).thenReturn(estabelecimento);
-        when(usuarioRepository.existsByLoginEmail("joao@forno.com")).thenReturn(false);
         when(protetorCpf.hash("123.456.789-09")).thenReturn("indice-cego");
         when(repository.existsByCpfHash("indice-cego")).thenReturn(false);
         when(protetorCpf.cifrar("123.456.789-09")).thenReturn("cifrado");
-        when(passwordEncoder.encode("senha-segura")).thenReturn("$2a$10$hash");
-        when(usuarioRepository.save(any(Usuario.class))).then(returnsFirstArg());
+        Usuario usuario = Fixtures.usuario(estabelecimento, PerfilUsuario.ENTREGADOR);
+        usuario.setNome("João");
+        when(cadastroUsuario.criar(estabelecimento, "João", "joao@forno.com", "senha-segura",
+                PerfilUsuario.ENTREGADOR)).thenReturn(usuario);
         when(repository.save(any(Motoboy.class))).then(returnsFirstArg());
 
         MotoboyResponse criado = service.criar(estabelecimento.getId(), requisicao());
@@ -109,21 +107,24 @@ class MotoboyServiceTest {
     @DisplayName("Deve recusar CPF já cadastrado (UC05 E2)")
     void deveRecusarCpfDuplicado() {
         when(buscador.estabelecimentoAtivo(estabelecimento.getId())).thenReturn(estabelecimento);
-        when(usuarioRepository.existsByLoginEmail("joao@forno.com")).thenReturn(false);
         when(protetorCpf.hash("123.456.789-09")).thenReturn("indice-cego");
         when(repository.existsByCpfHash("indice-cego")).thenReturn(true);
 
         assertThrows(CpfJaCadastradoException.class, () -> service.criar(estabelecimento.getId(), requisicao()));
-        verify(usuarioRepository, never()).save(any());
+        verifyNoInteractions(cadastroUsuario);
     }
 
     @Test
     @DisplayName("Deve recusar e-mail já cadastrado")
     void deveRecusarEmailDuplicado() {
         when(buscador.estabelecimentoAtivo(estabelecimento.getId())).thenReturn(estabelecimento);
-        when(usuarioRepository.existsByLoginEmail("joao@forno.com")).thenReturn(true);
+        when(protetorCpf.hash("123.456.789-09")).thenReturn("indice-cego");
+        when(repository.existsByCpfHash("indice-cego")).thenReturn(false);
+        when(cadastroUsuario.criar(any(), any(), any(), any(), any()))
+                .thenThrow(new EmailJaCadastradoException("joao@forno.com"));
 
         assertThrows(EmailJaCadastradoException.class, () -> service.criar(estabelecimento.getId(), requisicao()));
+        verify(repository, never()).save(any());
     }
 
     @Test

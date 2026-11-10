@@ -3,21 +3,19 @@ package br.com.agilizadelivery.service.impl;
 import java.util.List;
 import java.util.UUID;
 
-import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import br.com.agilizadelivery.dto.DtoMapper;
 import br.com.agilizadelivery.dto.request.CriarUsuarioRequest;
 import br.com.agilizadelivery.dto.response.UsuarioResponse;
-import br.com.agilizadelivery.entity.model.Estabelecimento;
 import br.com.agilizadelivery.entity.model.Usuario;
 import br.com.agilizadelivery.entity.model.enums.PerfilUsuario;
-import br.com.agilizadelivery.exception.EmailJaCadastradoException;
 import br.com.agilizadelivery.exception.RegraDeNegocioException;
 import br.com.agilizadelivery.repository.UsuarioRepository;
 import br.com.agilizadelivery.service.UsuarioService;
 import br.com.agilizadelivery.service.support.BuscadorTenant;
+import br.com.agilizadelivery.service.support.CadastroUsuario;
 
 /**
  * Usuarios de uma loja: administradores do restaurante e operadores.
@@ -31,15 +29,15 @@ public class UsuarioServiceImpl implements UsuarioService {
 
     private final UsuarioRepository repository;
     private final BuscadorTenant buscador;
-    private final PasswordEncoder passwordEncoder;
+    private final CadastroUsuario cadastroUsuario;
 
     public UsuarioServiceImpl(
             UsuarioRepository repository,
             BuscadorTenant buscador,
-            PasswordEncoder passwordEncoder) {
+            CadastroUsuario cadastroUsuario) {
         this.repository = repository;
         this.buscador = buscador;
-        this.passwordEncoder = passwordEncoder;
+        this.cadastroUsuario = cadastroUsuario;
     }
 
     @Override
@@ -50,20 +48,13 @@ public class UsuarioServiceImpl implements UsuarioService {
                     "O perfil informado não pode ser criado por esta operação: "
                             + "entregadores são cadastrados pela gestão da frota.");
         }
-        Estabelecimento estabelecimento = buscador.estabelecimentoAtivo(estabelecimentoId);
-        String email = request.loginEmail().trim().toLowerCase();
-        if (repository.existsByLoginEmail(email)) {
-            throw new EmailJaCadastradoException(email);
-        }
-
-        Usuario usuario = new Usuario();
-        usuario.setEstabelecimento(estabelecimento);
-        usuario.setNome(request.nome().trim());
-        usuario.setLoginEmail(email);
-        usuario.setSenhaHash(passwordEncoder.encode(request.senha()));
-        usuario.setPerfil(request.perfil());
-        usuario.setAtivo(true);
-        return DtoMapper.toResponse(repository.save(usuario));
+        Usuario usuario = cadastroUsuario.criar(
+                buscador.estabelecimentoAtivo(estabelecimentoId),
+                request.nome(),
+                request.loginEmail(),
+                request.senha(),
+                request.perfil());
+        return DtoMapper.toResponse(usuario);
     }
 
     @Override

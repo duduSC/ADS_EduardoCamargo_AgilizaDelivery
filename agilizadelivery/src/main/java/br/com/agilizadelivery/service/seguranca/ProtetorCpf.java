@@ -3,14 +3,14 @@ package br.com.agilizadelivery.service.seguranca;
 /**
  * Protecao do CPF do entregador em repouso (RNF02 e RNF07).
  *
+ * Nao ha operacao de decifrar: o CPF nunca e devolvido em texto claro.
+ *
  * cifrar produz um valor diferente a cada chamada; por isso a unicidade
  * e verificada pelo hash, um indice cego deterministico.
  */
 public interface ProtetorCpf {
 
     String cifrar(String cpf);
-
-    String decifrar(String cpfCifrado);
 
     /** Hash deterministico do CPF, com 64 caracteres hexadecimais. */
     String hash(String cpf);

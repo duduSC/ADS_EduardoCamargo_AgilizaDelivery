@@ -61,22 +61,6 @@ public class AesGcmProtetorCpf implements ProtetorCpf {
     }
 
     @Override
-    public String decifrar(String cpfCifrado) {
-        try {
-            ByteBuffer buffer = ByteBuffer.wrap(Base64.getDecoder().decode(cpfCifrado));
-            byte[] iv = new byte[TAMANHO_IV];
-            buffer.get(iv);
-            byte[] cifrado = new byte[buffer.remaining()];
-            buffer.get(cifrado);
-            Cipher cipher = Cipher.getInstance(CIFRA);
-            cipher.init(Cipher.DECRYPT_MODE, chaveCifra, new GCMParameterSpec(TAMANHO_TAG_BITS, iv));
-            return new String(cipher.doFinal(cifrado), StandardCharsets.UTF_8);
-        } catch (GeneralSecurityException | IllegalArgumentException e) {
-            throw new IllegalStateException("Falha ao decifrar o CPF.", e);
-        }
-    }
-
-    @Override
     public String hash(String cpf) {
         try {
             Mac mac = Mac.getInstance(HMAC);

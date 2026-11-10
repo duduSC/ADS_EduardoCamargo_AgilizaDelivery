@@ -26,6 +26,9 @@ public interface MotoboyRepository extends JpaRepository<Motoboy, UUID> {
 
     Boolean existsByCpfHash(String cpfHash);
 
+    /** Cadastro do entregador a partir da credencial, na autenticacao (UC07). */
+    Optional<Motoboy> findByUsuarioId(UUID usuarioId);
+
     /** O vinculo com a loja vem do usuario associado ao entregador. */
     Optional<Motoboy> findByIdAndUsuarioEstabelecimentoId(UUID id, UUID estabelecimentoId);
 

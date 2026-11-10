@@ -16,7 +16,6 @@ import br.com.agilizadelivery.dto.response.MotoboyResponse;
 import br.com.agilizadelivery.dto.response.ParadaRotaResponse;
 import br.com.agilizadelivery.dto.response.PedidoExternoResponse;
 import br.com.agilizadelivery.dto.response.ReciboResponse;
-import br.com.agilizadelivery.dto.response.SugestaoRotaResponse;
 import br.com.agilizadelivery.dto.response.UsuarioResponse;
 import br.com.agilizadelivery.entity.model.Caixa;
 import br.com.agilizadelivery.entity.model.ConfiguracaoIntegracao;
@@ -31,7 +30,6 @@ import br.com.agilizadelivery.entity.model.LoteEntrega;
 import br.com.agilizadelivery.entity.model.Motoboy;
 import br.com.agilizadelivery.entity.model.PedidoExterno;
 import br.com.agilizadelivery.entity.model.Recibo;
-import br.com.agilizadelivery.entity.model.SugestaoRota;
 import br.com.agilizadelivery.entity.model.Usuario;
 import br.com.agilizadelivery.entity.model.embeddable.Coordenada;
 
@@ -187,7 +185,6 @@ public final class DtoMapper {
                 lote.getStatus(),
                 lote.getQtdEntregas(),
                 lote.getValorTotalRepasse(),
-                lote.getDistanciaRotaKm(),
                 lote.getDespachadoEm(),
                 lote.getConcluidoEm(),
                 lote.getCriadoEm(),
@@ -276,17 +273,6 @@ public final class DtoMapper {
                 entrega.getEnderecoCompleto(),
                 toDto(entrega.getCoordenada()),
                 entrega.getStatus());
-    }
-
-    public static SugestaoRotaResponse toResponse(SugestaoRota sugestao) {
-        return new SugestaoRotaResponse(
-                sugestao.getId(),
-                sugestao.getLote().getId(),
-                sugestao.getMotoboy().getId(),
-                List.copyOf(sugestao.getOrdemEntregas()),
-                sugestao.getDistanciaSugeridaKm(),
-                sugestao.getObservacao(),
-                sugestao.getSugeridaEm());
     }
 
     public static CoordenadaDto toDto(Coordenada coordenada) {
