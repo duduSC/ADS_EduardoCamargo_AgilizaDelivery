@@ -15,5 +15,19 @@ public enum StatusEntrega {
     EM_ROTA,
     ENTREGUE,
     FALHA,
-    CANCELADA
+    CANCELADA;
+
+    /** Indica se a tabela de transicoes admite a mudanca para o destino. */
+    public boolean podeTransitarPara(StatusEntrega destino) {
+        return switch (this) {
+            case AGUARDANDO_DESPACHO -> destino == DESPACHADA || destino == CANCELADA;
+            case DESPACHADA -> destino == EM_ROTA || destino == AGUARDANDO_DESPACHO || destino == CANCELADA;
+            case EM_ROTA -> destino == ENTREGUE || destino == FALHA || destino == CANCELADA;
+            case ENTREGUE, FALHA, CANCELADA -> false;
+        };
+    }
+
+    public boolean finalizado() {
+        return this == ENTREGUE || this == FALHA || this == CANCELADA;
+    }
 }

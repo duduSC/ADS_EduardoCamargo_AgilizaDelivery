@@ -71,4 +71,13 @@ public class LoteEntrega extends EntidadeDoEstabelecimento {
 
     @Column(name = "concluido_em")
     private LocalDateTime concluidoEm;
+
+    /**
+     * Distancia viaria da rota principal (loja e paradas na ordem do
+     * operador). Informativa: o repasse continua apurado por entrega,
+     * pela distancia loja -> cliente (DVP 1.5.5).
+     */
+    @PositiveOrZero
+    @Column(name = "distancia_rota_km", precision = 6, scale = 2)
+    private BigDecimal distanciaRotaKm;
 }

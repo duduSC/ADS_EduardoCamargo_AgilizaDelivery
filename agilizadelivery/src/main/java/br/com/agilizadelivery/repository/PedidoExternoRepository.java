@@ -27,4 +27,6 @@ public interface PedidoExternoRepository extends JpaRepository<PedidoExterno, UU
 
     /** Pedidos importados que ainda nao viraram entrega. */
     List<PedidoExterno> findByEstabelecimentoIdAndProcessadoEmIsNull(UUID estabelecimentoId);
+
+    Optional<PedidoExterno> findByIdAndEstabelecimentoId(UUID id, UUID estabelecimentoId);
 }

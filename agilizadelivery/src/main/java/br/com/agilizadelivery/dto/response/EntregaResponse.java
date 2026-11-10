@@ -38,6 +38,7 @@ public record EntregaResponse(
         LocalDateTime prontoParaDespachoEm,
         LocalDateTime despachadaEm,
         LocalDateTime finalizadaEm,
+        Short ordemRota,
         LocalDateTime criadoEm,
         LocalDateTime atualizadoEm) {
 }

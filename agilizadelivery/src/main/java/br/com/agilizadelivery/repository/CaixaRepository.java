@@ -28,4 +28,7 @@ public interface CaixaRepository extends JpaRepository<Caixa, UUID> {
 
     /** Indica se o dia ja foi aberto, antes de criar um novo caixa. */
     boolean existsByEstabelecimentoIdAndDataReferencia(UUID estabelecimentoId, LocalDate dataReferencia);
+
+    /** Caixa de uma loja; recurso de outra loja nao e encontrado (HU13). */
+    Optional<Caixa> findByIdAndEstabelecimentoId(UUID id, UUID estabelecimentoId);
 }
