@@ -6,12 +6,11 @@ import java.util.List;
 import java.util.UUID;
 
 import br.com.agilizadelivery.entity.model.enums.FormaPagamento;
-import br.com.agilizadelivery.entity.model.enums.Provedor;
 
 public record PedidoExternoResponse(
         UUID id,
         UUID estabelecimentoId,
-        Provedor provedor,
+        String provedor,
         String idExterno,
         String numeroExibicao,
         String statusExterno,
