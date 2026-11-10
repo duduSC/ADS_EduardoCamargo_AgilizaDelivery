@@ -22,6 +22,7 @@ Eduardo dos Santos de Camargo
 | 2.7 | Entregas fora do raio passam a usar um valor de repasse configurado na loja, em vez de travar em revisão; o entregador ganha o UC08 – Acompanhar Acerto, com contestação de valores pelo aplicativo (HU14); MotivoRevisao troca SEM_FAIXA por CONTESTACAO_ENTREGADOR | Eduardo S.C | 05/10/2026 |
 | 2.8 | ENTREGA troca `saiu_para_entrega_em` por `pronto_para_despacho_em`, marcado pelo operador quando a cozinha conclui o pedido. Sem esse dado a métrica de aceleração do despacho (seção 1.2.3) não era calculável. O horário da saída permanece rastreável pelo ENTREGA_STATUS_HISTORICO, e o status EM_ROTA é mantido | Eduardo S.C | 07/10/2026 |
 | 2.9 | Ajuste manual de repasse passa a exigir que a entrega esteja fora de recibo: para corrigir uma entrega já vinculada, o operador cancela o recibo antes (UC03 A1, HU07, seção 1.5.5 passo 6, dicionário de ENTREGA). `pendente_revisao` passa a ter apenas duas origens: falha da Google Maps Platform (geocodificação ou rota) e contestação do entregador | Eduardo S.C | 09/11/2026 |
+| 3.0 | Alinhamento com o código após a revisão do backend (T001): `provedor` passa a ser `VARCHAR(20)` também em CONFIGURACAO_INTEGRACAO (antes ENUM), igualando-o a PEDIDO_EXTERNO, com os valores aceitos validados pela aplicação; ENTREGA ganha `ordem_rota` (ordem definida pelo operador no lote); Spring Boot passa de 3.x para 4.x (versão em uso no projeto) | Eduardo S.C | 10/11/2026 |
 
 ---
 
@@ -538,7 +539,7 @@ Nenhuma camada inferior acessa uma camada superior, conforme o RNF05.
 | ----- | ----- | ----- |
 | **Descrição** | **Versão** | **Objetivo** |
 | Java | 21 LTS | Linguagem do backend |
-| Spring Boot | 3.x | Plataforma de backend (Web, Data JPA, Security, WebSocket, Scheduler) |
+| Spring Boot | 4.x | Plataforma de backend (Web, Data JPA, Security, WebSocket, Scheduler) |
 | React | 18.x | Aplicação Web do operador e dos administradores (SPA) |
 | Flutter | 3.x | Aplicativo do entregador (Android) |
 | PostgreSQL | 16.x | Armazenamento persistente de dados |
@@ -696,6 +697,7 @@ erDiagram
         uuid estabelecimento_id FK
         uuid pedido_externo_id FK
         uuid lote_id FK
+        smallint ordem_rota
         uuid faixa_preco_id FK
         uuid recibo_id FK
         varchar nome_cliente
@@ -867,7 +869,7 @@ erDiagram
 | ----- | ----- | ----- | ----- |
 | id | UUID | PK | Identificador |
 | estabelecimento_id | UUID | FK, NOT NULL, UNIQUE (com provedor) | Loja. Relação 1:N opcional: a loja pode não ter integração (apenas entregas avulsas) ou ter uma por provedor |
-| provedor | ENUM (IFOOD, SIMULADOR) | NOT NULL | Provedor configurado |
+| provedor | VARCHAR(20) | NOT NULL | Provedor configurado; o conjunto de valores aceitos (hoje IFOOD e SIMULADOR) é validado pela aplicação, igual ao de PEDIDO_EXTERNO |
 | merchant_id | VARCHAR(100) | NOT NULL, UNIQUE (com provedor) | Identificador da loja no provedor; uma loja do provedor só pode estar vinculada a um estabelecimento |
 | ativo | BOOLEAN | NOT NULL | Liga/desliga o *polling* da loja |
 | ultimo_polling_em | TIMESTAMP | | Diagnóstico da integração |
@@ -935,6 +937,7 @@ erDiagram
 | estabelecimento_id | UUID | FK, NOT NULL | Isolamento multilocação |
 | pedido_externo_id | UUID | FK, NULL | Nulo quando a entrega é avulsa, cadastrada manualmente |
 | lote_id | UUID | FK, NULL | Nulo enquanto AGUARDANDO_DESPACHO |
+| ordem_rota | SMALLINT | NULL, CHECK (> 0) | Posição da entrega dentro do lote, na ordem definida pelo operador no despacho; nula fora de lote. Não há otimização algorítmica de sequência (seção 1.2.4) |
 | faixa_preco_id | UUID | FK, NULL | Faixa aplicada; preenchida no cálculo |
 | recibo_id | UUID | FK, NULL | Preenchido no acerto. Enquanto preenchido, `valor_repasse` não pode ser ajustado; a correção exige cancelar o recibo, o que torna este campo nulo. Fechado o caixa, o valor torna-se imutável em definitivo (HU07) |
 | nome_cliente | VARCHAR(120) | NOT NULL | Destinatário; copiado do PEDIDO_EXTERNO ou digitado na entrega avulsa |
