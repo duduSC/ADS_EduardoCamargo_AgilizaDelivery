@@ -2,6 +2,7 @@ package br.com.agilizadelivery.repository;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -27,4 +28,13 @@ public interface ReciboRepository extends JpaRepository<Recibo, UUID> {
 
     /** Recibos de uma loja em um dia. */
     List<Recibo> findByEstabelecimentoIdAndDataReferencia(UUID estabelecimentoId, LocalDate dataReferencia);
+
+    Optional<Recibo> findByIdAndEstabelecimentoId(UUID id, UUID estabelecimentoId);
+
+    List<Recibo> findByEstabelecimentoIdAndCaixaId(UUID estabelecimentoId, UUID caixaId);
+
+    List<Recibo> findByEstabelecimentoIdAndMotoboyIdAndStatus(
+            UUID estabelecimentoId,
+            UUID motoboyId,
+            StatusRecibo status);
 }

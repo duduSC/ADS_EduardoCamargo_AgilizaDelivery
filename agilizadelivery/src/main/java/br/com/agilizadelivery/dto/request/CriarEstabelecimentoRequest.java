@@ -19,5 +19,6 @@ public record CriarEstabelecimentoRequest(
         @NotBlank @Size(max = 255) String enderecoCompleto,
         @NotNull @Valid CoordenadaDto coordenada,
         @NotNull @Positive Short maxPedidosPorLote,
-        @PositiveOrZero BigDecimal valorRepasseForaDeArea) {
+        @PositiveOrZero BigDecimal valorRepasseForaDeArea,
+        @NotNull @Valid AdministradorInicialRequest administrador) {
 }

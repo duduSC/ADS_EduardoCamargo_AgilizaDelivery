@@ -7,26 +7,35 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import br.com.agilizadelivery.dto.DtoMapper;
+import br.com.agilizadelivery.dto.request.AdministradorInicialRequest;
 import br.com.agilizadelivery.dto.request.CriarEstabelecimentoRequest;
 import br.com.agilizadelivery.dto.response.EstabelecimentoResponse;
 import br.com.agilizadelivery.entity.model.Estabelecimento;
 import br.com.agilizadelivery.entity.model.embeddable.Coordenada;
+import br.com.agilizadelivery.entity.model.enums.PerfilUsuario;
 import br.com.agilizadelivery.entity.model.enums.StatusEstabelecimento;
 import br.com.agilizadelivery.exception.CnpjJaCadastradoException;
 import br.com.agilizadelivery.exception.EntidadeNaoEncontradaException;
 import br.com.agilizadelivery.repository.EstabelecimentoRepository;
 import br.com.agilizadelivery.service.EstabelecimentoService;
+import br.com.agilizadelivery.service.support.CadastroUsuario;
 
 @Service
 @Transactional(readOnly = true)
 public class EstabelecimentoServiceImpl implements EstabelecimentoService {
 
     private final EstabelecimentoRepository repository;
+    private final CadastroUsuario cadastroUsuario;
 
-    public EstabelecimentoServiceImpl(EstabelecimentoRepository repository) {
+    public EstabelecimentoServiceImpl(EstabelecimentoRepository repository, CadastroUsuario cadastroUsuario) {
         this.repository = repository;
+        this.cadastroUsuario = cadastroUsuario;
     }
 
+    /**
+     * Cadastra o restaurante e o seu usuario master, ADMIN_RESTAURANTE
+     * (UC06, passos 1 e 2). Se o e-mail do master ja existir, nada e gravado.
+     */
     @Override
     @Transactional
     public EstabelecimentoResponse criar(CriarEstabelecimentoRequest request) {
@@ -48,7 +57,15 @@ public class EstabelecimentoServiceImpl implements EstabelecimentoService {
         estabelecimento.setValorRepasseForaDeArea(request.valorRepasseForaDeArea());
         estabelecimento.setStatus(StatusEstabelecimento.ATIVO);
 
-        return DtoMapper.toResponse(repository.save(estabelecimento));
+        Estabelecimento salvo = repository.save(estabelecimento);
+        AdministradorInicialRequest administrador = request.administrador();
+        cadastroUsuario.criar(
+                salvo,
+                administrador.nome(),
+                administrador.loginEmail(),
+                administrador.senha(),
+                PerfilUsuario.ADMIN_RESTAURANTE);
+        return DtoMapper.toResponse(salvo);
     }
 
     @Override

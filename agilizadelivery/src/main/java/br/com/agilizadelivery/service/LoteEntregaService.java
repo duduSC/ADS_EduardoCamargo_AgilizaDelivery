@@ -5,6 +5,7 @@ import java.util.UUID;
 
 import br.com.agilizadelivery.dto.request.DespacharLoteRequest;
 import br.com.agilizadelivery.dto.response.LoteEntregaResponse;
+import br.com.agilizadelivery.dto.response.RotaLoteResponse;
 import br.com.agilizadelivery.entity.model.enums.StatusLote;
 
 public interface LoteEntregaService {
@@ -20,4 +21,7 @@ public interface LoteEntregaService {
     LoteEntregaResponse iniciarRota(UUID estabelecimentoId, UUID loteId, UUID motoboyId);
 
     LoteEntregaResponse devolverDespacho(UUID estabelecimentoId, UUID loteId, UUID usuarioId);
+
+    /** Entregas do lote na ordem de paradas definida pelo operador. */
+    RotaLoteResponse buscarRota(UUID estabelecimentoId, UUID loteId);
 }

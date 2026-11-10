@@ -33,4 +33,6 @@ public interface UsuarioRepository extends JpaRepository<Usuario, UUID> {
 
     /** Usuarios globais, sem vinculo com loja (ADMIN_GERAL). */
     List<Usuario> findByEstabelecimentoIsNull();
+
+    Optional<Usuario> findByIdAndEstabelecimentoId(UUID id, UUID estabelecimentoId);
 }

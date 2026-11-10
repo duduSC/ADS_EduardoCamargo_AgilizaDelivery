@@ -13,6 +13,7 @@ import br.com.agilizadelivery.dto.response.FalhaIntegracaoResponse;
 import br.com.agilizadelivery.dto.response.ItemPedidoResponse;
 import br.com.agilizadelivery.dto.response.LoteEntregaResponse;
 import br.com.agilizadelivery.dto.response.MotoboyResponse;
+import br.com.agilizadelivery.dto.response.ParadaRotaResponse;
 import br.com.agilizadelivery.dto.response.PedidoExternoResponse;
 import br.com.agilizadelivery.dto.response.ReciboResponse;
 import br.com.agilizadelivery.dto.response.UsuarioResponse;
@@ -110,6 +111,7 @@ public final class DtoMapper {
                 entrega.getProntoParaDespachoEm(),
                 entrega.getDespachadaEm(),
                 entrega.getFinalizadaEm(),
+                entrega.getOrdemRota(),
                 entrega.getCriadoEm(),
                 entrega.getAtualizadoEm());
     }
@@ -262,7 +264,18 @@ public final class DtoMapper {
                 usuario.getAtualizadoEm());
     }
 
-    private static CoordenadaDto toDto(Coordenada coordenada) {
+    public static ParadaRotaResponse toParada(Entrega entrega) {
+        return new ParadaRotaResponse(
+                entrega.getOrdemRota(),
+                entrega.getId(),
+                entrega.getNomeCliente(),
+                entrega.getTelefoneCliente(),
+                entrega.getEnderecoCompleto(),
+                toDto(entrega.getCoordenada()),
+                entrega.getStatus());
+    }
+
+    public static CoordenadaDto toDto(Coordenada coordenada) {
         if (coordenada == null) {
             return null;
         }

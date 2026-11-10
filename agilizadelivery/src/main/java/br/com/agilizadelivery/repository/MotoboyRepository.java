@@ -1,5 +1,6 @@
 package br.com.agilizadelivery.repository;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -7,6 +8,8 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
 import br.com.agilizadelivery.entity.model.Motoboy;
+import br.com.agilizadelivery.entity.model.enums.StatusCadastroMotoboy;
+
 /**
  * MotoboyRepository
  */
@@ -22,4 +25,16 @@ public interface MotoboyRepository extends JpaRepository<Motoboy, UUID> {
     Optional<Motoboy> findByUsuarioLoginEmail(String loginEmail);
 
     Boolean existsByCpfHash(String cpfHash);
+
+    /** Cadastro do entregador a partir da credencial, na autenticacao (UC07). */
+    Optional<Motoboy> findByUsuarioId(UUID usuarioId);
+
+    /** O vinculo com a loja vem do usuario associado ao entregador. */
+    Optional<Motoboy> findByIdAndUsuarioEstabelecimentoId(UUID id, UUID estabelecimentoId);
+
+    List<Motoboy> findByUsuarioEstabelecimentoId(UUID estabelecimentoId);
+
+    List<Motoboy> findByUsuarioEstabelecimentoIdAndStatusCadastro(
+            UUID estabelecimentoId,
+            StatusCadastroMotoboy statusCadastro);
 }

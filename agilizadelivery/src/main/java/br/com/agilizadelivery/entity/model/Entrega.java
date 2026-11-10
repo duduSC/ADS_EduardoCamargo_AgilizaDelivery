@@ -21,6 +21,7 @@ import jakarta.persistence.Table;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Positive;
 import jakarta.validation.constraints.PositiveOrZero;
 import jakarta.validation.constraints.Size;
 import lombok.AllArgsConstructor;
@@ -177,6 +178,14 @@ public class Entrega extends EntidadeDoEstabelecimento {
     @Column(name = "finalizada_em")
     private LocalDateTime finalizadaEm;
 
+    /**
+     * Posicao da entrega na rota principal do lote, definida pelo operador
+     * no despacho (1 = primeira parada). Nula fora de lote.
+     */
+    @Positive
+    @Column(name = "ordem_rota")
+    private Short ordemRota;
+
     /** ENTREGUE, FALHA e CANCELADA sao estados finais (DVP 1.4.4). */
     public boolean emEstadoFinal() {
         return StatusEntrega.ENTREGUE.equals(this.status)
@@ -193,23 +202,25 @@ public class Entrega extends EntidadeDoEstabelecimento {
     }
 
     /**
-     * O valor pode ser ajustado enquanto a entrega nao entrou em recibo
-     * ou, tendo entrado, enquanto o caixa daquele dia segue aberto
-     * (UC03 A1). O fechamento do caixa e que torna o valor imutavel.
+     * O valor so pode ser ajustado fora de recibo (UC03 A1, DVP 1.5.5
+     * passo 6). Para corrigir uma entrega vinculada, cancela-se antes o
+     * recibo, GERADO ou PAGO, o que a desvincula. A exigencia de caixa do
+     * dia aberto e verificada na camada de servico.
      */
     public boolean permiteAjusteDeValor() {
-        return this.recibo == null || this.recibo.permiteAlteracao();
+        return this.recibo == null;
     }
 
     /**
      * O entregador pode contestar o valor de uma entrega concluida
-     * enquanto ela ainda for corrigivel, isto e, ate o fechamento do
-     * caixa (UC08). Contestar uma entrega ja em revisao nao tem efeito.
+     * enquanto o periodo for corrigivel (UC08). Contestar uma entrega ja
+     * em revisao nao tem efeito. A exigencia de caixa do dia aberto e
+     * verificada na camada de servico.
      */
     public boolean podeSerContestada() {
         return emEstadoFinal()
                 && !Boolean.TRUE.equals(this.pendenteRevisao)
-                && permiteAjusteDeValor();
+                && (this.recibo == null || this.recibo.permiteAlteracao());
     }
 
     /**
