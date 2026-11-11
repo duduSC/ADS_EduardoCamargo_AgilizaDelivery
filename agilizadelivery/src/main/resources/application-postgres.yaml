@@ -1,0 +1,15 @@
+# Perfil PostgreSQL 16 (DVP 1.5.2). O schema vem das migracoes Flyway
+# (db/migration); o Hibernate so confere o mapeamento (validate).
+# Nenhuma credencial fica no repositorio: tudo vem do ambiente.
+spring:
+    datasource:
+        url: ${DB_URL}
+        username: ${DB_USER}
+        password: ${DB_PASSWORD}
+        driver-class-name: org.postgresql.Driver
+    jpa:
+        hibernate:
+            ddl-auto: validate
+    flyway:
+        enabled: true
+        locations: classpath:db/migration
