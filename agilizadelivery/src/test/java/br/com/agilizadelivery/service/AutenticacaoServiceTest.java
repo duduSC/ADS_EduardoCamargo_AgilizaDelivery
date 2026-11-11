@@ -77,7 +77,7 @@ class AutenticacaoServiceTest {
     void deveAutenticarOperador() {
         Usuario operador = cadastrado(PerfilUsuario.OPERADOR);
 
-        UsuarioAutenticadoResponse autenticado = service.autenticar(login(operador), CanalAcesso.BACKOFFICE_WEB);
+        UsuarioAutenticadoResponse autenticado = service.autenticar(login(operador), CanalAcesso.BACKOFFICE);
 
         assertEquals(operador.getId(), autenticado.usuarioId());
         assertEquals(estabelecimento.getId(), autenticado.estabelecimentoId());
@@ -92,7 +92,7 @@ class AutenticacaoServiceTest {
     void deveAutenticarAdminGeral() {
         Usuario admin = cadastrado(PerfilUsuario.ADMIN_GERAL);
 
-        UsuarioAutenticadoResponse autenticado = service.autenticar(login(admin), CanalAcesso.BACKOFFICE_WEB);
+        UsuarioAutenticadoResponse autenticado = service.autenticar(login(admin), CanalAcesso.BACKOFFICE);
 
         assertNull(autenticado.estabelecimentoId());
     }
@@ -106,7 +106,7 @@ class AutenticacaoServiceTest {
         when(passwordEncoder.matches(SENHA, entregador.getSenhaHash())).thenReturn(true);
         when(motoboyRepository.findByUsuarioId(entregador.getId())).thenReturn(Optional.of(motoboy));
 
-        UsuarioAutenticadoResponse autenticado = service.autenticar(login(entregador), CanalAcesso.APLICATIVO);
+        UsuarioAutenticadoResponse autenticado = service.autenticar(login(entregador), CanalAcesso.APP);
 
         assertEquals(motoboy.getId(), autenticado.motoboyId());
     }
@@ -117,7 +117,7 @@ class AutenticacaoServiceTest {
         when(usuarioRepository.findByLoginEmail("ninguem@forno.com")).thenReturn(Optional.empty());
 
         CredenciaisInvalidasException erro = assertThrows(CredenciaisInvalidasException.class, () ->
-                service.autenticar(new LoginRequest("ninguem@forno.com", SENHA), CanalAcesso.BACKOFFICE_WEB));
+                service.autenticar(new LoginRequest("ninguem@forno.com", SENHA), CanalAcesso.BACKOFFICE));
 
         assertEquals("E-mail ou senha inválidos.", erro.getMessage());
         verify(passwordEncoder).matches(SENHA, HASH_FICTICIO);
@@ -131,7 +131,7 @@ class AutenticacaoServiceTest {
         when(passwordEncoder.matches("errada", operador.getSenhaHash())).thenReturn(false);
 
         CredenciaisInvalidasException erro = assertThrows(CredenciaisInvalidasException.class, () ->
-                service.autenticar(new LoginRequest(operador.getLoginEmail(), "errada"), CanalAcesso.BACKOFFICE_WEB));
+                service.autenticar(new LoginRequest(operador.getLoginEmail(), "errada"), CanalAcesso.BACKOFFICE));
 
         assertEquals("E-mail ou senha inválidos.", erro.getMessage());
         verify(usuarioRepository, never()).save(any());
@@ -144,7 +144,7 @@ class AutenticacaoServiceTest {
         operador.setAtivo(false);
 
         assertThrows(UsuarioBloqueadoException.class, () ->
-                service.autenticar(login(operador), CanalAcesso.BACKOFFICE_WEB));
+                service.autenticar(login(operador), CanalAcesso.BACKOFFICE));
         verify(usuarioRepository, never()).save(any());
     }
 
@@ -153,11 +153,11 @@ class AutenticacaoServiceTest {
     void deveRecusarCanalIncompativel() {
         Usuario operador = cadastrado(PerfilUsuario.OPERADOR);
         assertThrows(AcessoNegadoException.class, () ->
-                service.autenticar(login(operador), CanalAcesso.APLICATIVO));
+                service.autenticar(login(operador), CanalAcesso.APP));
 
         Usuario entregador = cadastrado(PerfilUsuario.ENTREGADOR);
         assertThrows(AcessoNegadoException.class, () ->
-                service.autenticar(login(entregador), CanalAcesso.BACKOFFICE_WEB));
+                service.autenticar(login(entregador), CanalAcesso.BACKOFFICE));
     }
 
     @Test
@@ -167,7 +167,28 @@ class AutenticacaoServiceTest {
         estabelecimento.setStatus(StatusEstabelecimento.INATIVO);
 
         assertThrows(EstabelecimentoInativoException.class, () ->
-                service.autenticar(login(operador), CanalAcesso.BACKOFFICE_WEB));
+                service.autenticar(login(operador), CanalAcesso.BACKOFFICE));
+    }
+
+    @Test
+    @DisplayName("Deve reautenticar pelo id do usuario (refresh, PROVISORIO)")
+    void deveReautenticar() {
+        Usuario operador = Fixtures.usuario(estabelecimento, PerfilUsuario.OPERADOR);
+        when(usuarioRepository.findById(operador.getId())).thenReturn(Optional.of(operador));
+
+        UsuarioAutenticadoResponse autenticado = service.reautenticar(operador.getId(), CanalAcesso.BACKOFFICE);
+
+        assertEquals(operador.getId(), autenticado.usuarioId());
+        assertEquals(estabelecimento.getId(), autenticado.estabelecimentoId());
+    }
+
+    @Test
+    @DisplayName("Reautenticacao deve recusar usuario inexistente como credencial invalida")
+    void deveRecusarReautenticacaoDeUsuarioInexistente() {
+        when(usuarioRepository.findById(any())).thenReturn(java.util.Optional.empty());
+
+        assertThrows(CredenciaisInvalidasException.class, () ->
+                service.reautenticar(java.util.UUID.randomUUID(), CanalAcesso.BACKOFFICE));
     }
 
     @Test
@@ -181,7 +202,7 @@ class AutenticacaoServiceTest {
         when(motoboyRepository.findByUsuarioId(entregador.getId())).thenReturn(Optional.of(motoboy));
 
         assertThrows(UsuarioBloqueadoException.class, () ->
-                service.autenticar(login(entregador), CanalAcesso.APLICATIVO));
+                service.autenticar(login(entregador), CanalAcesso.APP));
         verify(usuarioRepository, never()).save(any());
     }
 }
