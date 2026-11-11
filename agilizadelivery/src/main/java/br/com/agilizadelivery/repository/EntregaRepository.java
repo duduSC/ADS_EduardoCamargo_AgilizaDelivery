@@ -44,6 +44,9 @@ public interface EntregaRepository extends JpaRepository<Entrega, UUID> {
             UUID estabelecimentoId,
             StatusEntrega status);
 
+    /** Fila de revisao do estabelecimento, ordenada por criacao (HU01/HU03). */
+    List<Entrega> findByEstabelecimentoIdAndPendenteRevisaoTrueOrderByCriadoEmAsc(UUID estabelecimentoId);
+
     List<Entrega> findByEstabelecimentoIdAndIdIn(UUID estabelecimentoId, Collection<UUID> ids);
 
     /** Entregas de um lote na ordem da rota definida pelo operador. */
