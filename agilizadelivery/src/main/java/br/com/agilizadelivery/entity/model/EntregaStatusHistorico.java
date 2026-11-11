@@ -1,5 +1,8 @@
 package br.com.agilizadelivery.entity.model;
 
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
+
 import br.com.agilizadelivery.entity.model.embeddable.Coordenada;
 import java.time.LocalDateTime;
 
@@ -56,11 +59,13 @@ public class EntregaStatusHistorico {
 
     /** Nulo na primeira transicao, quando a entrega e criada. */
     @Enumerated(EnumType.STRING)
+    @JdbcTypeCode(SqlTypes.NAMED_ENUM)
     @Column(name = "status_anterior", length = 25)
     private StatusEntrega statusAnterior;
 
     @NotNull
     @Enumerated(EnumType.STRING)
+    @JdbcTypeCode(SqlTypes.NAMED_ENUM)
     @Column(name = "status_novo", nullable = false, length = 25)
     private StatusEntrega statusNovo;
 

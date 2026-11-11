@@ -97,6 +97,7 @@ public class PedidoExterno extends EntidadeDoEstabelecimento {
     private BigDecimal valorTotal;
 
     @Enumerated(EnumType.STRING)
+    @JdbcTypeCode(SqlTypes.NAMED_ENUM)
     @Column(name = "forma_pagamento", length = 30)
     private FormaPagamento formaPagamento;
 

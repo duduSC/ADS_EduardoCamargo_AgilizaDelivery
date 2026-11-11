@@ -1,5 +1,8 @@
 package br.com.agilizadelivery.entity.model;
 
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
+
 import br.com.agilizadelivery.entity.model.base.EntidadeBase;
 import br.com.agilizadelivery.entity.model.embeddable.Coordenada;
 import java.time.LocalDateTime;
@@ -79,11 +82,13 @@ public class Motoboy extends EntidadeBase {
 
     @NotNull
     @Enumerated(EnumType.STRING)
+    @JdbcTypeCode(SqlTypes.NAMED_ENUM)
     @Column(name = "status_cadastro", nullable = false, length = 10)
     private StatusCadastroMotoboy statusCadastro = StatusCadastroMotoboy.ATIVO;
 
     @NotNull
     @Enumerated(EnumType.STRING)
+    @JdbcTypeCode(SqlTypes.NAMED_ENUM)
     @Column(name = "status_disponibilidade", nullable = false, length = 10)
     private StatusDisponibilidadeMotoboy statusDisponibilidade = StatusDisponibilidadeMotoboy.OFFLINE;
 

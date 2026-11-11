@@ -1,5 +1,8 @@
 package br.com.agilizadelivery.entity.model;
 
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
+
 import br.com.agilizadelivery.entity.model.base.EntidadeDoEstabelecimento;
 import br.com.agilizadelivery.entity.model.embeddable.Coordenada;
 import java.math.BigDecimal;
@@ -113,6 +116,7 @@ public class Entrega extends EntidadeDoEstabelecimento {
     private BigDecimal valorPedido;
 
     @Enumerated(EnumType.STRING)
+    @JdbcTypeCode(SqlTypes.NAMED_ENUM)
     @Column(name = "forma_pagamento", length = 30)
     private FormaPagamento formaPagamento;
 
@@ -143,6 +147,7 @@ public class Entrega extends EntidadeDoEstabelecimento {
 
     @NotNull
     @Enumerated(EnumType.STRING)
+    @JdbcTypeCode(SqlTypes.NAMED_ENUM)
     @Column(name = "status", nullable = false, length = 25)
     private StatusEntrega status = StatusEntrega.AGUARDANDO_DESPACHO;
 
@@ -157,6 +162,7 @@ public class Entrega extends EntidadeDoEstabelecimento {
     private Boolean pendenteRevisao = false;
 
     @Enumerated(EnumType.STRING)
+    @JdbcTypeCode(SqlTypes.NAMED_ENUM)
     @Column(name = "motivo_revisao", length = 30)
     private MotivoRevisao motivoRevisao;
 

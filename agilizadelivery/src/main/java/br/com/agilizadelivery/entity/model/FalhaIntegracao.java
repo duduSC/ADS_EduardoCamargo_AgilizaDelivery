@@ -62,6 +62,7 @@ public class FalhaIntegracao {
 
     @NotNull
     @Enumerated(EnumType.STRING)
+    @JdbcTypeCode(SqlTypes.NAMED_ENUM)
     @Column(name = "etapa", nullable = false, length = 20)
     private EtapaFalhaIntegracao etapa;
 
@@ -82,6 +83,7 @@ public class FalhaIntegracao {
 
     @NotNull
     @Enumerated(EnumType.STRING)
+    @JdbcTypeCode(SqlTypes.NAMED_ENUM)
     @Column(name = "status", nullable = false, length = 12)
     private StatusFalhaIntegracao status = StatusFalhaIntegracao.PENDENTE;
 
