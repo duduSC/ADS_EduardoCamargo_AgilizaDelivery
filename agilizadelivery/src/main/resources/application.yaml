@@ -20,3 +20,12 @@ agiliza:
     cpf:
       chave-cifra: ${AGILIZA_CPF_CHAVE_CIFRA:}
       chave-hash: ${AGILIZA_CPF_CHAVE_HASH:}
+  # JWT (D002). Sem JWT_SECRET a aplicacao nao sobe.
+  jwt:
+    segredo: ${JWT_SECRET:}
+    access-ttl: ${JWT_ACCESS_TTL:3h}
+    # PROVISORIO: refresh token fora do DVP 3.1.
+    refresh-ttl: ${JWT_REFRESH_TTL:30d}
+  # Origens do navegador aceitas, separadas por virgula. Vazio: nenhuma.
+  cors:
+    origens-permitidas: ${CORS_ORIGENS:}

@@ -22,3 +22,7 @@ agiliza:
         cpf:
             chave-cifra: ${AGILIZA_CPF_CHAVE_CIFRA:K8asvQ7GEr6geRhYRo3ehKVzQEEgVE1WOFQ1DOSeUJ8=}
             chave-hash: ${AGILIZA_CPF_CHAVE_HASH:Iw/puxmDeVZohf/Q7Ll6GLvqjARxEFwf0JqsU3dyZvI=}
+    jwt:
+        segredo: ${JWT_SECRET:UQYEmGZe0cmQNCw5EA7y5LrOP10eB3PaBM2+jM7CwlGtoufVjl53W/hLXM8Mreve}
+    cors:
+        origens-permitidas: ${CORS_ORIGENS:http://localhost:5173}
