@@ -20,6 +20,9 @@ public interface EntregaService {
 
     List<EntregaResponse> listarPendentesDeDespacho(UUID estabelecimentoId);
 
+    /** Fila de revisao: entregas com pendenteRevisao=true (HU01/HU03, S004). */
+    List<EntregaResponse> listarPendentesDeRevisao(UUID estabelecimentoId);
+
     List<EntregaResponse> listarDoMotoboy(
             UUID estabelecimentoId,
             UUID motoboyId,

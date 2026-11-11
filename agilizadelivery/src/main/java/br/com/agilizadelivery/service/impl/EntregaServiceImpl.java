@@ -120,6 +120,13 @@ public class EntregaServiceImpl implements EntregaService {
                 estabelecimentoId, StatusEntrega.AGUARDANDO_DESPACHO));
     }
 
+    /** Fila de revisao do estabelecimento (HU01/HU03, S004). */
+    @Override
+    public List<EntregaResponse> listarPendentesDeRevisao(UUID estabelecimentoId) {
+        return paraResposta(repository.findByEstabelecimentoIdAndPendenteRevisaoTrueOrderByCriadoEmAsc(
+                estabelecimentoId));
+    }
+
     /** Extrato do entregador no periodo (UC08). */
     @Override
     public List<EntregaResponse> listarDoMotoboy(
