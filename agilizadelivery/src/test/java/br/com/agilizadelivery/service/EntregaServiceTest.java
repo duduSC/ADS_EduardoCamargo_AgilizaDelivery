@@ -89,6 +89,9 @@ class EntregaServiceTest {
     @Mock
     private AjusteRepasse ajusteRepasse;
 
+    @Mock
+    private br.com.agilizadelivery.websocket.PublicadorTempoReal publicador;
+
     private EntregaService service;
     private Estabelecimento estabelecimento;
     private Motoboy motoboy;
@@ -98,7 +101,7 @@ class EntregaServiceTest {
     @BeforeEach
     void setUp() {
         service = new EntregaServiceImpl(repository, buscador, localizacao, calculadoraRepasse,
-                new TransicaoEntrega(historicoRepository), encerramentoLote, politicaCorrecao, ajusteRepasse);
+                new TransicaoEntrega(historicoRepository), encerramentoLote, politicaCorrecao, ajusteRepasse, publicador);
         estabelecimento = Fixtures.estabelecimento();
         motoboy = Fixtures.motoboy(estabelecimento);
         lote = Fixtures.lote(estabelecimento, motoboy, StatusLote.EM_ROTA);
