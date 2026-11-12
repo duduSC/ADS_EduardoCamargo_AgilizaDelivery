@@ -39,6 +39,7 @@ import br.com.agilizadelivery.service.LoteEntregaService;
 import br.com.agilizadelivery.service.support.BuscadorTenant;
 import br.com.agilizadelivery.service.support.EncerramentoLote;
 import br.com.agilizadelivery.service.support.TransicaoEntrega;
+import br.com.agilizadelivery.websocket.PublicadorTempoReal;
 
 /**
  * Despacho e execucao dos lotes (UC01, UC02).
@@ -56,18 +57,21 @@ public class LoteEntregaServiceImpl implements LoteEntregaService {
     private final MotoboyRepository motoboyRepository;
     private final BuscadorTenant buscador;
     private final TransicaoEntrega transicao;
+    private final PublicadorTempoReal publicador;
 
     public LoteEntregaServiceImpl(
             LoteEntregaRepository repository,
             EntregaRepository entregaRepository,
             MotoboyRepository motoboyRepository,
             BuscadorTenant buscador,
-            TransicaoEntrega transicao) {
+            TransicaoEntrega transicao,
+            PublicadorTempoReal publicador) {
         this.repository = repository;
         this.entregaRepository = entregaRepository;
         this.motoboyRepository = motoboyRepository;
         this.buscador = buscador;
         this.transicao = transicao;
+        this.publicador = publicador;
     }
 
     @Override
@@ -114,7 +118,13 @@ public class LoteEntregaServiceImpl implements LoteEntregaService {
 
         motoboy.setStatusDisponibilidade(StatusDisponibilidadeMotoboy.EM_ROTA);
         motoboyRepository.save(motoboy);
-        return DtoMapper.toResponse(salvo);
+
+        LoteEntregaResponse resposta = DtoMapper.toResponse(salvo);
+        for (Entrega entrega : entregas) {
+            publicador.publicarEntrega(estabelecimentoId, "DESPACHADA", DtoMapper.toResponse(entrega));
+        }
+        publicador.publicarFrota(estabelecimentoId, "DISPONIBILIDADE_ALTERADA", DtoMapper.toResponse(motoboy));
+        return resposta;
     }
 
     @Override
@@ -155,7 +165,11 @@ public class LoteEntregaServiceImpl implements LoteEntregaService {
         entregaRepository.saveAll(entregas);
 
         lote.setStatus(StatusLote.EM_ROTA);
-        return DtoMapper.toResponse(repository.save(lote));
+        LoteEntregaResponse resposta = DtoMapper.toResponse(repository.save(lote));
+        for (Entrega entrega : entregas) {
+            publicador.publicarEntrega(estabelecimentoId, "STATUS_ALTERADO", DtoMapper.toResponse(entrega));
+        }
+        return resposta;
     }
 
     /** Devolucao do lote antes da saida (UC01 A4). */
@@ -189,6 +203,12 @@ public class LoteEntregaServiceImpl implements LoteEntregaService {
             motoboy.setStatusDisponibilidade(StatusDisponibilidadeMotoboy.ONLINE);
             motoboyRepository.save(motoboy);
         }
+
+        UUID eId = salvo.getEstabelecimento().getId();
+        for (Entrega entrega : devolvidas) {
+            publicador.publicarEntrega(eId, "DEVOLVIDA", DtoMapper.toResponse(entrega));
+        }
+        publicador.publicarFrota(eId, "DISPONIBILIDADE_ALTERADA", DtoMapper.toResponse(motoboy));
         return DtoMapper.toResponse(salvo);
     }
 

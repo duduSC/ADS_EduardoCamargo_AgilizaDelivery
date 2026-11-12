@@ -6,18 +6,24 @@ import java.util.UUID;
 
 import br.com.agilizadelivery.dto.request.AlterarDisponibilidadeMotoboyRequest;
 import br.com.agilizadelivery.dto.request.CriarMotoboyRequest;
+import br.com.agilizadelivery.dto.request.EditarMotoboyRequest;
 import br.com.agilizadelivery.dto.response.MotoboyResponse;
 import br.com.agilizadelivery.entity.model.enums.StatusCadastroMotoboy;
+import br.com.agilizadelivery.entity.model.enums.StatusDisponibilidadeMotoboy;
 
 public interface MotoboyService {
 
     MotoboyResponse criar(UUID estabelecimentoId, CriarMotoboyRequest request);
+
+    MotoboyResponse editar(UUID estabelecimentoId, UUID motoboyId, EditarMotoboyRequest request);
 
     MotoboyResponse buscarPorId(UUID estabelecimentoId, UUID motoboyId);
 
     List<MotoboyResponse> listarPorEstabelecimento(UUID estabelecimentoId);
 
     List<MotoboyResponse> listarPorStatusCadastro(UUID estabelecimentoId, StatusCadastroMotoboy status);
+
+    List<MotoboyResponse> listarPorStatusDisponibilidade(UUID estabelecimentoId, StatusDisponibilidadeMotoboy status);
 
     MotoboyResponse alterarStatusCadastro(
             UUID estabelecimentoId,

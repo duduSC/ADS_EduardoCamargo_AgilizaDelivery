@@ -62,6 +62,7 @@ public class SegurancaConfig {
                         .requestMatchers(HttpMethod.POST, "/api/auth/login", "/api/auth/refresh").permitAll()
                         .requestMatchers(HttpMethod.GET, "/actuator/health").permitAll()
                         .requestMatchers("/error").permitAll()
+                        .requestMatchers("/ws", "/ws/**").permitAll()
                         .anyRequest().authenticated())
                 .exceptionHandling(erros -> erros
                         .authenticationEntryPoint(respostaErro)
