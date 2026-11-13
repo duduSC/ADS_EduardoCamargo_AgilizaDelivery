@@ -1,6 +1,8 @@
 package br.com.agilizadelivery.controller;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.UUID;
 import java.util.concurrent.ThreadLocalRandom;
 
@@ -8,19 +10,25 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 
 import br.com.agilizadelivery.dto.response.UsuarioAutenticadoResponse;
+import br.com.agilizadelivery.entity.model.Caixa;
 import br.com.agilizadelivery.entity.model.Entrega;
 import br.com.agilizadelivery.entity.model.Estabelecimento;
 import br.com.agilizadelivery.entity.model.Motoboy;
+import br.com.agilizadelivery.entity.model.Recibo;
 import br.com.agilizadelivery.entity.model.Usuario;
 import br.com.agilizadelivery.entity.model.embeddable.Coordenada;
 import br.com.agilizadelivery.entity.model.enums.PerfilUsuario;
 import br.com.agilizadelivery.entity.model.enums.StatusCadastroMotoboy;
+import br.com.agilizadelivery.entity.model.enums.StatusCaixa;
 import br.com.agilizadelivery.entity.model.enums.StatusDisponibilidadeMotoboy;
 import br.com.agilizadelivery.entity.model.enums.StatusEntrega;
 import br.com.agilizadelivery.entity.model.enums.StatusEstabelecimento;
+import br.com.agilizadelivery.entity.model.enums.StatusRecibo;
+import br.com.agilizadelivery.repository.CaixaRepository;
 import br.com.agilizadelivery.repository.EntregaRepository;
 import br.com.agilizadelivery.repository.EstabelecimentoRepository;
 import br.com.agilizadelivery.repository.MotoboyRepository;
+import br.com.agilizadelivery.repository.ReciboRepository;
 import br.com.agilizadelivery.repository.UsuarioRepository;
 import br.com.agilizadelivery.seguranca.jwt.ServicoJwt;
 import br.com.agilizadelivery.service.CanalAcesso;
@@ -40,6 +48,8 @@ public class CenarioWeb {
     private final UsuarioRepository usuarioRepository;
     private final MotoboyRepository motoboyRepository;
     private final EntregaRepository entregaRepository;
+    private final CaixaRepository caixaRepository;
+    private final ReciboRepository reciboRepository;
     private final PasswordEncoder passwordEncoder;
     private final ServicoJwt servicoJwt;
     private String hashSenha;
@@ -49,12 +59,16 @@ public class CenarioWeb {
             UsuarioRepository usuarioRepository,
             MotoboyRepository motoboyRepository,
             EntregaRepository entregaRepository,
+            CaixaRepository caixaRepository,
+            ReciboRepository reciboRepository,
             PasswordEncoder passwordEncoder,
             ServicoJwt servicoJwt) {
         this.estabelecimentoRepository = estabelecimentoRepository;
         this.usuarioRepository = usuarioRepository;
         this.motoboyRepository = motoboyRepository;
         this.entregaRepository = entregaRepository;
+        this.caixaRepository = caixaRepository;
+        this.reciboRepository = reciboRepository;
         this.passwordEncoder = passwordEncoder;
         this.servicoJwt = servicoJwt;
     }
@@ -145,6 +159,46 @@ public class CenarioWeb {
         entrega.setValorRepasse(new BigDecimal("9.00"));
         entrega.setStatus(status);
         entrega.setPendenteRevisao(false);
+        return entregaRepository.save(entrega);
+    }
+
+    /** Caixa ABERTO para hoje (ou data especifica). */
+    public Caixa caixa(Estabelecimento estabelecimento) {
+        return caixa(estabelecimento, LocalDate.now(), StatusCaixa.ABERTO);
+    }
+
+    public Caixa caixa(Estabelecimento estabelecimento, LocalDate data, StatusCaixa status) {
+        Caixa caixa = new Caixa();
+        caixa.setEstabelecimento(estabelecimento);
+        caixa.setDataReferencia(data);
+        caixa.setAbertoEm(data.atStartOfDay());
+        caixa.setStatus(status);
+        if (status == StatusCaixa.FECHADO) {
+            caixa.setFechadoEm(LocalDateTime.now());
+        }
+        return caixaRepository.save(caixa);
+    }
+
+    /** Recibo GERADO vinculado a um caixa e entregador. */
+    public Recibo recibo(Estabelecimento estabelecimento, Motoboy motoboy, Caixa caixa, Usuario gerador) {
+        Recibo recibo = new Recibo();
+        recibo.setEstabelecimento(estabelecimento);
+        recibo.setCaixa(caixa);
+        recibo.setMotoboy(motoboy);
+        recibo.setUsuarioGerador(gerador);
+        recibo.setDataReferencia(caixa.getDataReferencia());
+        recibo.setPeriodoInicio(caixa.getDataReferencia().atStartOfDay());
+        recibo.setPeriodoFim(caixa.getDataReferencia().atTime(23, 59));
+        recibo.setQtdEntregas((short) 1);
+        recibo.setValorTotal(new BigDecimal("9.00"));
+        recibo.setStatus(StatusRecibo.GERADO);
+        return reciboRepository.save(recibo);
+    }
+
+    /** Entrega ENTREGUE vinculada a um recibo (ja em recibo). */
+    public Entrega entregaComRecibo(Estabelecimento estabelecimento, Recibo recibo) {
+        Entrega entrega = entrega(estabelecimento, StatusEntrega.ENTREGUE);
+        entrega.setRecibo(recibo);
         return entregaRepository.save(entrega);
     }
 

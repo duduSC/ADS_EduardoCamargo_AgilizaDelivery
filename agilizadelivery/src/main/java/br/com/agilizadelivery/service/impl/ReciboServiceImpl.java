@@ -173,6 +173,11 @@ public class ReciboServiceImpl implements ReciboService {
         return DtoMapper.toResponse(repository.save(recibo));
     }
 
+    @Override
+    public List<ReciboResponse> listarPorMotoboy(UUID estabelecimentoId, UUID motoboyId) {
+        return paraResposta(repository.findByEstabelecimentoIdAndMotoboyId(estabelecimentoId, motoboyId));
+    }
+
     private Caixa caixaAbertoDoDia(UUID estabelecimentoId, LocalDate data) {
         Caixa caixa = caixaRepository.findByEstabelecimentoIdAndDataReferencia(estabelecimentoId, data)
                 .orElseThrow(() -> new EntidadeNaoEncontradaException(String.format(
