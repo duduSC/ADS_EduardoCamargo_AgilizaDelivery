@@ -23,10 +23,14 @@ import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
 
+import br.com.agilizadelivery.entity.model.Caixa;
 import br.com.agilizadelivery.entity.model.Entrega;
 import br.com.agilizadelivery.entity.model.Estabelecimento;
+import br.com.agilizadelivery.entity.model.Motoboy;
+import br.com.agilizadelivery.entity.model.Recibo;
 import br.com.agilizadelivery.entity.model.Usuario;
 import br.com.agilizadelivery.entity.model.enums.PerfilUsuario;
+import br.com.agilizadelivery.entity.model.enums.StatusCaixa;
 import br.com.agilizadelivery.entity.model.enums.StatusEntrega;
 
 /**
@@ -267,6 +271,77 @@ class EntregaControllerTest {
             mockMvc.perform(get("/api/entregas")
                             .header(HttpHeaders.AUTHORIZATION, cenario.bearer(motoboy.getUsuario())))
                     .andExpect(status().isForbidden());
+        }
+    }
+
+    @Nested
+    @DisplayName("POST /api/entregas/{id}/ajustes")
+    class AjustarRepasse {
+
+        @Test
+        @DisplayName("Deve ajustar repasse de entrega sem recibo")
+        void deveAjustarRepasse() throws Exception {
+            Entrega entrega = cenario.entrega(loja, StatusEntrega.ENTREGUE);
+            cenario.caixa(loja);
+
+            mockMvc.perform(post("/api/entregas/" + entrega.getId() + "/ajustes")
+                            .header(HttpHeaders.AUTHORIZATION, bearer)
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("""
+                                    {"valorNovo": 12.50, "motivo": "Correcao de faixa"}
+                                    """))
+                    .andExpect(status().isCreated())
+                    .andExpect(jsonPath("$.valorNovo").value(12.50))
+                    .andExpect(jsonPath("$.motivo", is("Correcao de faixa")));
+        }
+
+        @Test
+        @DisplayName("Entrega com recibo: 422 AJUSTE_VALOR_NAO_PERMITIDO (Constituicao 5.1)")
+        void deveRecusarAjusteComRecibo() throws Exception {
+            Caixa caixaAberto = cenario.caixa(loja);
+            Motoboy motoboy = cenario.motoboy(loja);
+            Recibo recibo = cenario.recibo(loja, motoboy, caixaAberto, operador);
+            Entrega entrega = cenario.entregaComRecibo(loja, recibo);
+
+            mockMvc.perform(post("/api/entregas/" + entrega.getId() + "/ajustes")
+                            .header(HttpHeaders.AUTHORIZATION, bearer)
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("""
+                                    {"valorNovo": 15.00, "motivo": "Teste"}
+                                    """))
+                    .andExpect(status().isUnprocessableEntity())
+                    .andExpect(jsonPath("$.codigo", is("AJUSTE_VALOR_NAO_PERMITIDO")));
+        }
+
+        @Test
+        @DisplayName("Sem motivo: 400 DADOS_INVALIDOS")
+        void deveExigirMotivo() throws Exception {
+            Entrega entrega = cenario.entrega(loja, StatusEntrega.ENTREGUE);
+
+            mockMvc.perform(post("/api/entregas/" + entrega.getId() + "/ajustes")
+                            .header(HttpHeaders.AUTHORIZATION, bearer)
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("""
+                                    {"valorNovo": 12.50, "motivo": ""}
+                                    """))
+                    .andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.codigo", is("DADOS_INVALIDOS")));
+        }
+    }
+
+    @Nested
+    @DisplayName("GET /api/entregas/{id}/ajustes")
+    class ListarAjustes {
+
+        @Test
+        @DisplayName("Deve listar historico de ajustes vazio")
+        void deveListarHistoricoVazio() throws Exception {
+            Entrega entrega = cenario.entrega(loja, StatusEntrega.ENTREGUE);
+
+            mockMvc.perform(get("/api/entregas/" + entrega.getId() + "/ajustes")
+                            .header(HttpHeaders.AUTHORIZATION, bearer))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$", hasSize(0)));
         }
     }
 }

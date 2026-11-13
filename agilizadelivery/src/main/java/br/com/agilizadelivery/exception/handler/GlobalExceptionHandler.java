@@ -9,6 +9,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
@@ -133,6 +134,27 @@ public class GlobalExceptionHandler {
                 .error(HttpStatus.BAD_REQUEST.getReasonPhrase())
                 .codigo(CodigoErro.CORPO_REQUISICAO_INVALIDO)
                 .message("O corpo da requisição é inválido, está malformado ou contém valores incompatíveis.")
+                .path(request.getRequestURI())
+                .build();
+
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(body);
+    }
+
+    /**
+     * Trata parametros obrigatorios ausentes na query string.
+     */
+    @ExceptionHandler(MissingServletRequestParameterException.class)
+    public ResponseEntity<ApiErrorResponse> tratarParametroAusente(
+            MissingServletRequestParameterException ex, HttpServletRequest request) {
+
+        String mensagem = String.format("O parâmetro obrigatório '%s' não foi informado.", ex.getParameterName());
+
+        ApiErrorResponse body = ApiErrorResponse.builder()
+                .timestamp(Instant.now())
+                .status(HttpStatus.BAD_REQUEST.value())
+                .error(HttpStatus.BAD_REQUEST.getReasonPhrase())
+                .codigo(CodigoErro.PARAMETRO_INVALIDO)
+                .message(mensagem)
                 .path(request.getRequestURI())
                 .build();
 

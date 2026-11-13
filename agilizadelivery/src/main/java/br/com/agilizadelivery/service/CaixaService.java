@@ -25,4 +25,6 @@ public interface CaixaService {
             UUID caixaId,
             UUID usuarioReaberturaId,
             String motivoReabertura);
+
+    List<CaixaResponse> listarPorPeriodo(UUID estabelecimentoId, LocalDate dataInicio, LocalDate dataFim);
 }

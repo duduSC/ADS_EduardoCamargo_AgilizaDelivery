@@ -150,6 +150,16 @@ public class CaixaServiceImpl implements CaixaService {
         return DtoMapper.toResponse(reaberto);
     }
 
+    @Override
+    public List<CaixaResponse> listarPorPeriodo(UUID estabelecimentoId, LocalDate dataInicio, LocalDate dataFim) {
+        return caixaRepository
+                .findByEstabelecimentoIdAndDataReferenciaBetweenOrderByDataReferenciaDesc(
+                        estabelecimentoId, dataInicio, dataFim)
+                .stream()
+                .map(DtoMapper::toResponse)
+                .toList();
+    }
+
     private Caixa buscar(UUID estabelecimentoId, UUID caixaId) {
         return caixaRepository.findByIdAndEstabelecimentoId(caixaId, estabelecimentoId)
                 .orElseThrow(() -> EntidadeNaoEncontradaException.porId(Caixa.class, caixaId));

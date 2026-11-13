@@ -17,13 +17,16 @@ import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
 import br.com.agilizadelivery.dto.request.AjustarCoordenadaRequest;
+import br.com.agilizadelivery.dto.request.AjustarRepasseRequest;
 import br.com.agilizadelivery.dto.request.CancelarEntregaRequest;
 import br.com.agilizadelivery.dto.request.CriarEntregaAvulsaRequest;
 import br.com.agilizadelivery.dto.request.ResolverRevisaoRequest;
+import br.com.agilizadelivery.dto.response.EntregaAjusteValorResponse;
 import br.com.agilizadelivery.dto.response.EntregaResponse;
 import br.com.agilizadelivery.entity.model.enums.StatusEntrega;
 import br.com.agilizadelivery.seguranca.Perfis;
 import br.com.agilizadelivery.seguranca.jwt.UsuarioLogado;
+import br.com.agilizadelivery.service.EntregaAjusteValorService;
 import br.com.agilizadelivery.service.EntregaService;
 import jakarta.validation.Valid;
 
@@ -41,9 +44,11 @@ import jakarta.validation.Valid;
 public class EntregaController {
 
     private final EntregaService entregaService;
+    private final EntregaAjusteValorService ajusteValorService;
 
-    public EntregaController(EntregaService entregaService) {
+    public EntregaController(EntregaService entregaService, EntregaAjusteValorService ajusteValorService) {
         this.entregaService = entregaService;
+        this.ajusteValorService = ajusteValorService;
     }
 
     /**
@@ -126,5 +131,30 @@ public class EntregaController {
                 logado.estabelecimentoObrigatorio(), id,
                 logado.usuarioId(),
                 request.valorRepasse(), request.motivo());
+    }
+
+    /**
+     * Ajuste manual do repasse (UC03 A1). Recusado se a entrega tiver
+     * recibo vinculado (Constituicao 5.1) ou se o caixa estiver FECHADO
+     * (Constituicao 5.4).
+     */
+    @PostMapping("/{id}/ajustes")
+    @ResponseStatus(HttpStatus.CREATED)
+    public EntregaAjusteValorResponse ajustarRepasse(
+            @AuthenticationPrincipal UsuarioLogado logado,
+            @PathVariable UUID id,
+            @Valid @RequestBody AjustarRepasseRequest request) {
+        return ajusteValorService.ajustar(
+                logado.estabelecimentoObrigatorio(), id,
+                logado.usuarioId(), request);
+    }
+
+    /** Historico de ajustes de repasse da entrega. */
+    @GetMapping("/{id}/ajustes")
+    public List<EntregaAjusteValorResponse> listarAjustes(
+            @AuthenticationPrincipal UsuarioLogado logado,
+            @PathVariable UUID id) {
+        return ajusteValorService.listarPorEntrega(
+                logado.estabelecimentoObrigatorio(), id);
     }
 }
