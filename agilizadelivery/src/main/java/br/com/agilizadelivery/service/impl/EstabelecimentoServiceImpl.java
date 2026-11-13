@@ -9,6 +9,7 @@ import org.springframework.transaction.annotation.Transactional;
 import br.com.agilizadelivery.dto.DtoMapper;
 import br.com.agilizadelivery.dto.request.AdministradorInicialRequest;
 import br.com.agilizadelivery.dto.request.CriarEstabelecimentoRequest;
+import br.com.agilizadelivery.dto.request.EditarEstabelecimentoRequest;
 import br.com.agilizadelivery.dto.response.EstabelecimentoResponse;
 import br.com.agilizadelivery.entity.model.Estabelecimento;
 import br.com.agilizadelivery.entity.model.embeddable.Coordenada;
@@ -77,10 +78,35 @@ public class EstabelecimentoServiceImpl implements EstabelecimentoService {
     }
 
     @Override
+    public List<EstabelecimentoResponse> listarTodos() {
+        return repository.findAll().stream()
+                .map(DtoMapper::toResponse)
+                .toList();
+    }
+
+    @Override
     public List<EstabelecimentoResponse> listarPorStatus(StatusEstabelecimento status) {
         return repository.findByStatus(status).stream()
                 .map(DtoMapper::toResponse)
                 .toList();
+    }
+
+    @Override
+    @Transactional
+    public EstabelecimentoResponse editarParametros(UUID estabelecimentoId, EditarEstabelecimentoRequest request) {
+        Estabelecimento estabelecimento = repository.findById(estabelecimentoId)
+                .orElseThrow(() -> EntidadeNaoEncontradaException.porId(
+                        Estabelecimento.class, estabelecimentoId));
+        if (request.maxPedidosPorLote() != null) {
+            estabelecimento.setMaxPedidosPorLote(request.maxPedidosPorLote());
+        }
+        if (request.valorRepasseForaDeArea() != null) {
+            estabelecimento.setValorRepasseForaDeArea(request.valorRepasseForaDeArea());
+        }
+        if (request.telefone() != null) {
+            estabelecimento.setTelefone(request.telefone());
+        }
+        return DtoMapper.toResponse(repository.save(estabelecimento));
     }
 
     @Override
