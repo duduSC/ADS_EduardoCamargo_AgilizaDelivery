@@ -28,3 +28,6 @@ agiliza:
         origens-permitidas: ${CORS_ORIGENS:http://localhost:5173}
     demo:
         carga-inicial: ${AGILIZA_DEMO:true}
+    integracao:
+        worker:
+            habilitado: ${AGILIZA_WORKER:true}

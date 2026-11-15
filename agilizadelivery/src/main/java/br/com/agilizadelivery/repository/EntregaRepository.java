@@ -49,6 +49,9 @@ public interface EntregaRepository extends JpaRepository<Entrega, UUID> {
 
     boolean existsByEstabelecimentoId(UUID estabelecimentoId);
 
+    /** Limite de seguranca do simulador de pedidos (T011). */
+    long countByEstabelecimentoIdAndStatus(UUID estabelecimentoId, StatusEntrega status);
+
     List<Entrega> findByEstabelecimentoIdAndIdIn(UUID estabelecimentoId, Collection<UUID> ids);
 
     /** Entregas de um lote na ordem da rota definida pelo operador. */

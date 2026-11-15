@@ -32,11 +32,13 @@ import br.com.agilizadelivery.entity.model.enums.StatusDisponibilidadeMotoboy;
 import br.com.agilizadelivery.entity.model.enums.StatusEntrega;
 import br.com.agilizadelivery.entity.model.enums.StatusEstabelecimento;
 import br.com.agilizadelivery.repository.CaixaRepository;
+import br.com.agilizadelivery.repository.ConfiguracaoIntegracaoRepository;
 import br.com.agilizadelivery.repository.DistanciaPrecoRepository;
 import br.com.agilizadelivery.repository.EntregaRepository;
 import br.com.agilizadelivery.repository.EstabelecimentoRepository;
 import br.com.agilizadelivery.repository.MotoboyRepository;
 import br.com.agilizadelivery.repository.UsuarioRepository;
+import br.com.agilizadelivery.service.support.Provedores;
 
 /**
  * Carga de demonstracao (T010, D009). Banco H2 proprio, para os dados
@@ -73,6 +75,9 @@ class CargaDemonstracaoTest {
 
     @Autowired
     private EntregaRepository entregaRepository;
+
+    @Autowired
+    private ConfiguracaoIntegracaoRepository configuracaoIntegracaoRepository;
 
     @Value("${agiliza.demo.senha}")
     private String senha;
@@ -125,6 +130,18 @@ class CargaDemonstracaoTest {
     }
 
     @Test
+    @DisplayName("A carga cria a integracao SIMULADOR inativa (T011)")
+    void integracaoSimuladorInativa() {
+        assertThat(configuracaoIntegracaoRepository.findByEstabelecimentoIdAndProvedor(
+                        loja().getId(), Provedores.SIMULADOR))
+                .get()
+                .satisfies(configuracao -> {
+                    assertThat(configuracao.getAtivo()).isFalse();
+                    assertThat(configuracao.getMerchantId()).isEqualTo(CargaDemonstracao.MERCHANT_SIMULADOR);
+                });
+    }
+
+    @Test
     @DisplayName("Rodar a carga de novo nao duplica nada")
     void idempotente() {
         UUID lojaId = loja().getId();
@@ -134,6 +151,7 @@ class CargaDemonstracaoTest {
         long faixas = distanciaPrecoRepository.count();
         long caixas = caixaRepository.count();
         long entregas = entregaRepository.count();
+        long integracoes = configuracaoIntegracaoRepository.count();
 
         carga.executar();
         carga.executar();
@@ -144,6 +162,7 @@ class CargaDemonstracaoTest {
         assertThat(distanciaPrecoRepository.count()).isEqualTo(faixas);
         assertThat(caixaRepository.count()).isEqualTo(caixas);
         assertThat(entregaRepository.count()).isEqualTo(entregas);
+        assertThat(configuracaoIntegracaoRepository.count()).isEqualTo(integracoes);
         assertThat(loja().getId()).isEqualTo(lojaId);
     }
 

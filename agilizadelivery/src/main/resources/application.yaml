@@ -29,6 +29,20 @@ agiliza:
   # Origens do navegador aceitas, separadas por virgula. Vazio: nenhuma.
   cors:
     origens-permitidas: ${CORS_ORIGENS:}
+  # Worker de integracao com provedores de pedidos (DVP 1.5.6, T011).
+  # Desligado aqui e no perfil postgres; ligado no perfil h2.
+  integracao:
+    worker:
+      habilitado: ${AGILIZA_WORKER:false}
+      intervalo: 30s
+      # Recuo exponencial do RNF04: recuo-inicial, 2x, 4x... ate max-tentativas.
+      recuo-inicial: 200ms
+      max-tentativas: 5
+    simulador:
+      max-por-ciclo: 2
+      raio-km: 6
+      # Para de gerar quando a loja tiver este numero de entregas aguardando.
+      limite-aguardando: 15
   # Carga de demonstracao (D009, T010). SO DESENVOLVIMENTO: desligada aqui
   # e no perfil postgres; ligada no perfil h2. AGILIZA_DEMO=true liga.
   demo:

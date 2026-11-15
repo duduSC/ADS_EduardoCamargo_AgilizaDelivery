@@ -18,21 +18,25 @@ import br.com.agilizadelivery.dto.request.CriarEntregaAvulsaRequest;
 import br.com.agilizadelivery.dto.request.CriarEstabelecimentoRequest;
 import br.com.agilizadelivery.dto.request.CriarMotoboyRequest;
 import br.com.agilizadelivery.dto.request.CriarUsuarioRequest;
+import br.com.agilizadelivery.dto.request.SalvarConfiguracaoIntegracaoRequest;
 import br.com.agilizadelivery.dto.request.SalvarDistanciaPrecoRequest;
 import br.com.agilizadelivery.entity.model.Estabelecimento;
 import br.com.agilizadelivery.entity.model.enums.FormaPagamento;
 import br.com.agilizadelivery.entity.model.enums.PerfilUsuario;
 import br.com.agilizadelivery.repository.CaixaRepository;
+import br.com.agilizadelivery.repository.ConfiguracaoIntegracaoRepository;
 import br.com.agilizadelivery.repository.EntregaRepository;
 import br.com.agilizadelivery.repository.EstabelecimentoRepository;
 import br.com.agilizadelivery.repository.UsuarioRepository;
 import br.com.agilizadelivery.service.CaixaService;
+import br.com.agilizadelivery.service.ConfiguracaoIntegracaoService;
 import br.com.agilizadelivery.service.DistanciaPrecoService;
 import br.com.agilizadelivery.service.EntregaService;
 import br.com.agilizadelivery.service.EstabelecimentoService;
 import br.com.agilizadelivery.service.MotoboyService;
 import br.com.agilizadelivery.service.UsuarioService;
 import br.com.agilizadelivery.service.support.CadastroUsuario;
+import br.com.agilizadelivery.service.support.Provedores;
 import lombok.extern.slf4j.Slf4j;
 
 /**
@@ -60,6 +64,9 @@ public class CargaDemonstracao implements ApplicationRunner {
     /** CNPJ ficticio, com digitos verificadores validos. */
     public static final String CNPJ_LOJA = "11222333000181";
 
+    /** merchantId da integracao SIMULADOR da loja demo (T011). */
+    public static final String MERCHANT_SIMULADOR = "demo-simulador";
+
     /** Loja no centro de Passo Fundo/RS. */
     static final BigDecimal LATITUDE_LOJA = new BigDecimal("-28.2620000");
     static final BigDecimal LONGITUDE_LOJA = new BigDecimal("-52.4083000");
@@ -76,6 +83,8 @@ public class CargaDemonstracao implements ApplicationRunner {
     private final DistanciaPrecoService distanciaPrecoService;
     private final CaixaService caixaService;
     private final EntregaService entregaService;
+    private final ConfiguracaoIntegracaoRepository configuracaoIntegracaoRepository;
+    private final ConfiguracaoIntegracaoService configuracaoIntegracaoService;
 
     public CargaDemonstracao(
             @Value("${agiliza.demo.senha}") String senha,
@@ -89,7 +98,9 @@ public class CargaDemonstracao implements ApplicationRunner {
             MotoboyService motoboyService,
             DistanciaPrecoService distanciaPrecoService,
             CaixaService caixaService,
-            EntregaService entregaService) {
+            EntregaService entregaService,
+            ConfiguracaoIntegracaoRepository configuracaoIntegracaoRepository,
+            ConfiguracaoIntegracaoService configuracaoIntegracaoService) {
         this.senha = senha;
         this.cadastroUsuario = cadastroUsuario;
         this.usuarioRepository = usuarioRepository;
@@ -102,6 +113,8 @@ public class CargaDemonstracao implements ApplicationRunner {
         this.distanciaPrecoService = distanciaPrecoService;
         this.caixaService = caixaService;
         this.entregaService = entregaService;
+        this.configuracaoIntegracaoRepository = configuracaoIntegracaoRepository;
+        this.configuracaoIntegracaoService = configuracaoIntegracaoService;
     }
 
     @Override
@@ -121,6 +134,7 @@ public class CargaDemonstracao implements ApplicationRunner {
         criarFaixas(lojaId);
         abrirCaixaDoDia(lojaId);
         criarEntregas(lojaId);
+        criarIntegracaoSimulador(lojaId);
         log.info("Carga de demonstração pronta: loja {} ({}); usuários {}, {}, {}, {}, {} "
                         + "(senha de desenvolvimento: ver README do backend).",
                 loja.getNomeFantasia(), lojaId, EMAIL_ADMIN_GERAL, EMAIL_ADMIN_LOJA, EMAIL_OPERADOR,
@@ -180,6 +194,18 @@ public class CargaDemonstracao implements ApplicationRunner {
         LocalDate hoje = LocalDate.now();
         if (!caixaRepository.existsByEstabelecimentoIdAndDataReferencia(lojaId, hoje)) {
             caixaService.abrirCaixa(lojaId, new AbrirCaixaRequest(hoje));
+        }
+    }
+
+    /**
+     * Integracao SIMULADOR inativa (T011): o admin da loja a liga com
+     * PUT /api/integracoes e "ativo": true para comecar a apresentacao.
+     */
+    private void criarIntegracaoSimulador(UUID lojaId) {
+        if (configuracaoIntegracaoRepository.findByEstabelecimentoIdAndProvedor(lojaId, Provedores.SIMULADOR)
+                .isEmpty()) {
+            configuracaoIntegracaoService.salvar(lojaId,
+                    new SalvarConfiguracaoIntegracaoRequest(Provedores.SIMULADOR, MERCHANT_SIMULADOR, false));
         }
     }
 

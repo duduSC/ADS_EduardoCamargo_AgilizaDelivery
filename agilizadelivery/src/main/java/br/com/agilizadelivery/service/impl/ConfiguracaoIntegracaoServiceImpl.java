@@ -58,6 +58,9 @@ public class ConfiguracaoIntegracaoServiceImpl implements ConfiguracaoIntegracao
                 });
 
         configuracao.setMerchantId(request.merchantId());
+        if (request.ativo() != null) {
+            configuracao.setAtivo(request.ativo());
+        }
         return DtoMapper.toResponse(repository.save(configuracao));
     }
 

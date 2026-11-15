@@ -703,7 +703,7 @@
           ]
         },
         {
-          "name": "Salvar vínculo com provedor",
+          "name": "Ligar o simulador de pedidos",
           "request": {
             "method": "PUT",
             "header": [
@@ -734,13 +734,14 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"provedor\": \"SIMULADOR\",\n  \"merchantId\": \"demo-simulador\"\n}",
+              "raw": "{\n  \"provedor\": \"SIMULADOR\",\n  \"merchantId\": \"demo-simulador\",\n  \"ativo\": true\n}",
               "options": {
                 "raw": {
                   "language": "json"
                 }
               }
-            }
+            },
+            "description": "T011: liga a integração SIMULADOR da loja demo; novos pedidos surgem a cada ~30 s. Envie \"ativo\": false para desligar."
           },
           "event": [
             {
@@ -754,6 +755,47 @@
               }
             }
           ]
+        },
+        {
+          "name": "Desligar o simulador de pedidos",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/integracoes",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "integracoes"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tokenLoja}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"provedor\": \"SIMULADOR\",\n  \"merchantId\": \"demo-simulador\",\n  \"ativo\": false\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
         },
         {
           "name": "Listar usuários da loja",
