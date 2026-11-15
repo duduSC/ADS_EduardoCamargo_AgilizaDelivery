@@ -5,6 +5,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
@@ -30,6 +31,7 @@ import br.com.agilizadelivery.repository.EntregaRepository;
 import br.com.agilizadelivery.repository.LoteEntregaRepository;
 import br.com.agilizadelivery.repository.MotoboyRepository;
 import br.com.agilizadelivery.service.Fixtures;
+import br.com.agilizadelivery.websocket.PublicadorTempoReal;
 
 @ExtendWith(MockitoExtension.class)
 class EncerramentoLoteTest {
@@ -43,13 +45,16 @@ class EncerramentoLoteTest {
     @Mock
     private MotoboyRepository motoboyRepository;
 
+    @Mock
+    private PublicadorTempoReal publicador;
+
     private EncerramentoLote encerramento;
     private Estabelecimento estabelecimento;
     private Motoboy motoboy;
 
     @BeforeEach
     void setUp() {
-        encerramento = new EncerramentoLote(entregaRepository, loteRepository, motoboyRepository);
+        encerramento = new EncerramentoLote(entregaRepository, loteRepository, motoboyRepository, publicador);
         estabelecimento = Fixtures.estabelecimento();
         motoboy = Fixtures.motoboy(estabelecimento);
         motoboy.setStatusDisponibilidade(StatusDisponibilidadeMotoboy.EM_ROTA);
@@ -77,6 +82,7 @@ class EncerramentoLoteTest {
         assertEquals(reais("30.00"), lote.getValorTotalRepasse());
         assertEquals(StatusDisponibilidadeMotoboy.ONLINE, motoboy.getStatusDisponibilidade());
         verify(motoboyRepository).save(motoboy);
+        verify(publicador).publicarFrota(eq(estabelecimento.getId()), eq("DISPONIBILIDADE_ALTERADA"), any());
     }
 
     @Test
@@ -94,6 +100,7 @@ class EncerramentoLoteTest {
         assertEquals(reais("21.00"), lote.getValorTotalRepasse());
         verify(loteRepository).save(lote);
         verify(motoboyRepository, never()).save(any());
+        verifyNoInteractions(publicador);
     }
 
     @Test

@@ -73,10 +73,11 @@ class ReciboControllerTest {
                             .content("""
                                     {
                                       "motoboyId": "%s",
-                                      "periodoInicio": "2026-11-13T00:00:00",
-                                      "periodoFim": "2026-11-13T23:59:59"
+                                      "periodoInicio": "%sT00:00:00",
+                                      "periodoFim": "%sT23:59:59"
                                     }
-                                    """.formatted(motoboy.getId())))
+                                    """.formatted(motoboy.getId(), caixa.getDataReferencia(),
+                                    caixa.getDataReferencia())))
                     .andExpect(status().isUnprocessableEntity());
         }
 

@@ -162,7 +162,9 @@ public class MotoboyServiceImpl implements MotoboyService {
             exigirAptoAFicarOnline(motoboy);
         }
         motoboy.setStatusDisponibilidade(destino);
-        return DtoMapper.toResponse(repository.save(motoboy));
+        MotoboyResponse resposta = DtoMapper.toResponse(repository.save(motoboy));
+        publicador.publicarFrota(estabelecimentoId, "DISPONIBILIDADE_ALTERADA", resposta);
+        return resposta;
     }
 
     /** Telemetria so e aceita em ONLINE ou EM_ROTA (RNF07). */

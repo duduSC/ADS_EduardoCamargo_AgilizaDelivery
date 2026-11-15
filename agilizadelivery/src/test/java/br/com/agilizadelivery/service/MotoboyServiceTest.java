@@ -164,6 +164,7 @@ class MotoboyServiceTest {
                 new AlterarDisponibilidadeMotoboyRequest(StatusDisponibilidadeMotoboy.ONLINE));
 
         assertEquals(StatusDisponibilidadeMotoboy.ONLINE, online.statusDisponibilidade());
+        verify(publicador).publicarFrota(estabelecimento.getId(), "DISPONIBILIDADE_ALTERADA", online);
     }
 
     @Test
