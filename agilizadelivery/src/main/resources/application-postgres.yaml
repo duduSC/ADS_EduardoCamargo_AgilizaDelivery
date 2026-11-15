@@ -13,3 +13,7 @@ spring:
     flyway:
         enabled: true
         locations: classpath:db/migration
+
+agiliza:
+    demo:
+        carga-inicial: ${AGILIZA_DEMO:false}
