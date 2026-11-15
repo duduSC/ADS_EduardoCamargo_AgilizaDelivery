@@ -21,10 +21,13 @@ import br.com.agilizadelivery.dto.request.AtualizarPosicaoRequest;
 import br.com.agilizadelivery.dto.request.CriarMotoboyRequest;
 import br.com.agilizadelivery.dto.request.EditarMotoboyRequest;
 import br.com.agilizadelivery.dto.response.MotoboyResponse;
+import br.com.agilizadelivery.entity.model.Motoboy;
 import br.com.agilizadelivery.entity.model.enums.StatusCadastroMotoboy;
 import br.com.agilizadelivery.entity.model.enums.StatusDisponibilidadeMotoboy;
+import br.com.agilizadelivery.exception.EntidadeNaoEncontradaException;
 import br.com.agilizadelivery.seguranca.Perfis;
 import br.com.agilizadelivery.seguranca.jwt.UsuarioLogado;
+import br.com.agilizadelivery.service.EntregadorService;
 import br.com.agilizadelivery.service.MotoboyService;
 import jakarta.validation.Valid;
 
@@ -42,9 +45,11 @@ import jakarta.validation.Valid;
 public class MotoboyController {
 
     private final MotoboyService motoboyService;
+    private final EntregadorService entregadorService;
 
-    public MotoboyController(MotoboyService motoboyService) {
+    public MotoboyController(MotoboyService motoboyService, EntregadorService entregadorService) {
         this.motoboyService = motoboyService;
+        this.entregadorService = entregadorService;
     }
 
     /**
@@ -116,17 +121,26 @@ public class MotoboyController {
     }
 
     /**
-     * Recebe posicao GPS do app do entregador. Endpoint REST alternativo
-     * ao destino STOMP, para clientes sem WebSocket.
+     * Recebe posicao GPS do app do entregador.
+     *
+     * Obsoleto desde a T009: usar PATCH /api/entregador/posicao, que tira o
+     * entregador do token. Aqui, {id} diferente do entregador do token
+     * responde 404, como um id inexistente.
      */
+    @Deprecated(since = "T009")
     @PatchMapping("/{id}/posicao")
     @PreAuthorize(Perfis.ENTREGADOR)
     public MotoboyResponse atualizarPosicao(
             @AuthenticationPrincipal UsuarioLogado logado,
             @PathVariable UUID id,
             @Valid @RequestBody AtualizarPosicaoRequest request) {
+        UUID estabelecimentoId = EntregadorController.estabelecimento(logado);
+        UUID proprio = entregadorService.motoboyDoUsuario(estabelecimentoId, logado.usuarioId());
+        if (!proprio.equals(id)) {
+            throw EntidadeNaoEncontradaException.porId(Motoboy.class, id);
+        }
         return motoboyService.atualizarPosicao(
-                logado.estabelecimentoObrigatorio(), id,
+                estabelecimentoId, id,
                 request.latitude(), request.longitude());
     }
 }
