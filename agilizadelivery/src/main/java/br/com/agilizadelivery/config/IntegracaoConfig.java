@@ -9,6 +9,7 @@ import org.springframework.web.client.RestClient;
 import br.com.agilizadelivery.integracao.maps.GoogleGeocodingServicoDeGeocodificacao;
 import br.com.agilizadelivery.integracao.maps.GoogleMapsProperties;
 import br.com.agilizadelivery.integracao.maps.GoogleRoutesServicoDeRotas;
+import br.com.agilizadelivery.integracao.pedidos.IntegracaoPedidosProperties;
 import br.com.agilizadelivery.service.rota.DistanciaEmLinhaReta;
 import br.com.agilizadelivery.service.rota.GeocodificacaoComCache;
 import br.com.agilizadelivery.service.rota.RotasComCache;
@@ -26,7 +27,7 @@ import lombok.extern.slf4j.Slf4j;
  */
 @Slf4j
 @Configuration
-@EnableConfigurationProperties(GoogleMapsProperties.class)
+@EnableConfigurationProperties({GoogleMapsProperties.class, IntegracaoPedidosProperties.class})
 public class IntegracaoConfig {
 
     @Bean

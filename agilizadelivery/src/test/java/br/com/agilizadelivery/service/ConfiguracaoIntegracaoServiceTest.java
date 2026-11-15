@@ -94,6 +94,25 @@ class ConfiguracaoIntegracaoServiceTest {
     }
 
     @Test
+    @DisplayName("ativo informado no PUT liga e desliga a integração existente (T011)")
+    void deveLigarEDesligarPeloPut() {
+        ConfiguracaoIntegracao existente = configuracao(estabelecimento, "merchant-1");
+        when(buscador.estabelecimentoAtivo(estabelecimento.getId())).thenReturn(estabelecimento);
+        when(repository.findByEstabelecimentoIdAndProvedor(estabelecimento.getId(), Provedores.IFOOD))
+                .thenReturn(Optional.of(existente));
+        when(repository.findByProvedorAndMerchantId(Provedores.IFOOD, "merchant-1"))
+                .thenReturn(Optional.of(existente));
+        when(repository.save(existente)).thenReturn(existente);
+
+        assertFalse(service.salvar(estabelecimento.getId(),
+                new SalvarConfiguracaoIntegracaoRequest(Provedores.IFOOD, "merchant-1", false)).ativo());
+        assertFalse(service.salvar(estabelecimento.getId(),
+                new SalvarConfiguracaoIntegracaoRequest(Provedores.IFOOD, "merchant-1")).ativo());
+        assertTrue(service.salvar(estabelecimento.getId(),
+                new SalvarConfiguracaoIntegracaoRequest(Provedores.IFOOD, "merchant-1", true)).ativo());
+    }
+
+    @Test
     @DisplayName("Deve recusar merchant_id já vinculado a outra loja")
     void deveRecusarMerchantDeOutraLoja() {
         when(buscador.estabelecimentoAtivo(estabelecimento.getId())).thenReturn(estabelecimento);

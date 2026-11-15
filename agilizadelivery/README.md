@@ -34,6 +34,23 @@ O que é criado: a loja "Pizzaria Demo" (ATIVO, centro de Passo Fundo/RS, até 5
 
 Sem `GOOGLE_MAPS_API_KEY`, a distância loja → cliente é a linha reta (Haversine) × 1,3, com 2 casas. O log avisa ao subir: `GOOGLE_MAPS_API_KEY ausente: distância em linha reta (PROVISÓRIO, D009)`. Uma entrega sem coordenada continua indo para revisão (SEM_COORDENADA). Com a chave definida, vale a Routes API e, em falha, SEM_DISTANCIA (DVP 1.5.5).
 
+## Simulador de pedidos (T011)
+
+O worker de integração (DVP 1.5.6) roda a cada 30 s quando `agiliza.integracao.worker.habilitado` (`AGILIZA_WORKER`) é `true`. Ele vem ligado no perfil `h2` e desligado nos outros.
+
+A carga de demonstração cria a integração `SIMULADOR` da loja demo **inativa** (`merchantId` `demo-simulador`). Para começar a apresentação, o admin da loja a liga:
+
+```
+PUT /api/integracoes   (token de loja@agiliza.dev)
+{"provedor": "SIMULADOR", "merchantId": "demo-simulador", "ativo": true}
+```
+
+Na coleção, o request é Loja → "Ligar o simulador de pedidos". Para desligar, use `"ativo": false`.
+
+A cada ciclo surgem de 0 a 2 pedidos fictícios, com itens, pagamento e coordenada a até 6 km da loja. Cada um vira uma entrega AGUARDANDO_DESPACHO, que é publicada em `/topic/estabelecimento/{id}/entregas` com o tipo `CRIADA`.
+
+O simulador para de gerar quando a loja tem 15 ou mais entregas aguardando despacho. Quando a importação de um pedido falha, ele é repetido até 5 vezes com recuo exponencial. Se todas as tentativas falharem, a falha vai para `GET /api/falhas-integracao` e o ciclo continua.
+
 ## Postman / Insomnia
 
 Importe os dois arquivos de `postman/`:
