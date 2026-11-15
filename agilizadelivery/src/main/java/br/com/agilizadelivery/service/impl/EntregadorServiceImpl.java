@@ -241,6 +241,7 @@ public class EntregadorServiceImpl implements EntregadorService {
                 lote.getQtdEntregas(),
                 lote.getDespachadoEm(),
                 lote.getConcluidoEm(),
+                lote.getEstabelecimento().getNomeFantasia(),
                 DtoMapper.toDto(lote.getEstabelecimento().getCoordenada()),
                 entregas);
     }
@@ -270,6 +271,8 @@ public class EntregadorServiceImpl implements EntregadorService {
                 entrega.getPagoOnline(),
                 entrega.getTrocoPara(),
                 entrega.getObservacoes(),
+                entrega.getDistanciaKm(),
+                entrega.getValorRepasse(),
                 entrega.getMotivoFalha(),
                 entrega.getFinalizadaEm(),
                 entrega.getPendenteRevisao(),
