@@ -9,7 +9,8 @@ import br.com.agilizadelivery.entity.model.enums.StatusLote;
 
 /**
  * Lote em execucao pelo entregador (UC02), com as entregas na ordem de
- * paradas definida pelo operador.
+ * paradas definida pelo operador. nomeFantasiaEstabelecimento (T012, D010)
+ * alimenta a mensagem pronta do WhatsApp (HU04).
  */
 public record LoteDoEntregadorResponse(
         UUID id,
@@ -17,6 +18,7 @@ public record LoteDoEntregadorResponse(
         Short qtdEntregas,
         LocalDateTime despachadoEm,
         LocalDateTime concluidoEm,
+        String nomeFantasiaEstabelecimento,
         CoordenadaDto coordenadaEstabelecimento,
         List<EntregaDoEntregadorResponse> entregas) {
 }

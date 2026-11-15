@@ -2990,7 +2990,8 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test('status de sucesso', () => pm.expect(pm.response.code).to.be.oneOf([200]));",
-                  "pm.test('lote ativo e o despachado', () => pm.expect(pm.response.json().id).to.eql(pm.environment.get('loteId')));"
+                  "pm.test('lote ativo e o despachado', () => pm.expect(pm.response.json().id).to.eql(pm.environment.get('loteId')));",
+                  "pm.test('lote traz nome da loja e repasse/distancia por entrega (T012)', () => { const lote = pm.response.json(); pm.expect(lote).to.have.property('nomeFantasiaEstabelecimento'); lote.entregas.forEach(e => { pm.expect(e).to.have.property('valorRepasse'); pm.expect(e).to.have.property('distanciaKm'); }); });"
                 ]
               }
             }

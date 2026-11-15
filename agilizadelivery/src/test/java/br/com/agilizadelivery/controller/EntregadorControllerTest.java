@@ -345,6 +345,9 @@ class EntregadorControllerTest {
             pedidoExternoRepository.save(pedido);
 
             Entrega segunda = cenario.entrega(loja, StatusEntrega.AGUARDANDO_DESPACHO);
+            segunda.setDistanciaKm(null);
+            segunda.setValorRepasse(null);
+            entregaRepository.save(segunda);
             Entrega primeira = cenario.entrega(loja, StatusEntrega.AGUARDANDO_DESPACHO);
             primeira.setPedidoExterno(pedido);
             entregaRepository.save(primeira);
@@ -355,7 +358,14 @@ class EntregadorControllerTest {
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.id", is(loteId.toString())))
                     .andExpect(jsonPath("$.status", is("DESPACHADO")))
+                    .andExpect(jsonPath("$.nomeFantasiaEstabelecimento", is("Loja de teste")))
                     .andExpect(jsonPath("$.entregas", hasSize(2)))
+                    .andExpect(jsonPath("$.entregas[0].distanciaKm").value(2.10))
+                    .andExpect(jsonPath("$.entregas[0].valorRepasse").value(9.00))
+                    .andExpect(jsonPath("$.entregas[1].distanciaKm", nullValue()))
+                    .andExpect(jsonPath("$.entregas[1].valorRepasse", nullValue()))
+                    .andExpect(jsonPath("$.entregas[0].faixaPrecoId").doesNotExist())
+                    .andExpect(jsonPath("$.entregas[0].reciboId").doesNotExist())
                     .andExpect(jsonPath("$.entregas[0].id", is(primeira.getId().toString())))
                     .andExpect(jsonPath("$.entregas[0].ordemRota", is(1)))
                     .andExpect(jsonPath("$.entregas[0].itens", hasSize(1)))
@@ -440,13 +450,25 @@ class EntregadorControllerTest {
             UUID loteId = despachar(motoboy, primeira, segunda);
             iniciar(loteId);
 
-            mockMvc.perform(post("/api/entregador/entregas/" + primeira.getId() + "/status")
+            MvcResult entregue = mockMvc.perform(post("/api/entregador/entregas/" + primeira.getId() + "/status")
                             .header(HttpHeaders.AUTHORIZATION, bearerEntregador)
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(corpoStatus("ENTREGUE", null)))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.status", is("ENTREGUE")))
-                    .andExpect(jsonPath("$.finalizadaEm").exists());
+                    .andExpect(jsonPath("$.finalizadaEm").exists())
+                    .andExpect(jsonPath("$.valorRepasse").exists())
+                    .andExpect(jsonPath("$.distanciaKm").exists())
+                    .andReturn();
+            // T012: o valor congelado visto pelo entregador e o mesmo do painel.
+            String corpoEntregue = entregue.getResponse().getContentAsString();
+            mockMvc.perform(get("/api/entregas/" + primeira.getId())
+                            .header(HttpHeaders.AUTHORIZATION, bearerOperador))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.valorRepasse").value(
+                            (Object) JsonPath.read(corpoEntregue, "$.valorRepasse")))
+                    .andExpect(jsonPath("$.distanciaKm").value(
+                            (Object) JsonPath.read(corpoEntregue, "$.distanciaKm")));
 
             mockMvc.perform(post("/api/entregador/entregas/" + segunda.getId() + "/status")
                             .header(HttpHeaders.AUTHORIZATION, bearerEntregador)

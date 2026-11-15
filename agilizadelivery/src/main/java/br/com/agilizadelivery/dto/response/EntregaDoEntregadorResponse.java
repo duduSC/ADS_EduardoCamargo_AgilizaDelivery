@@ -15,6 +15,10 @@ import br.com.agilizadelivery.entity.model.enums.StatusEntrega;
  * contato, itens, valor e forma de pagamento. Nao expoe dados internos da
  * loja (faixa, recibo, despachante). Entregas avulsas trazem itens vazios;
  * o conteudo delas fica em observacoes.
+ *
+ * distanciaKm e valorRepasse (T012, D010, DVP 1.5.5 passo 2) sao os mesmos
+ * de EntregaResponse: provisorios ate ENTREGUE/FALHA, congelados depois, e
+ * nulos enquanto nao calculados.
  */
 public record EntregaDoEntregadorResponse(
         UUID id,
@@ -34,6 +38,8 @@ public record EntregaDoEntregadorResponse(
         Boolean pagoOnline,
         BigDecimal trocoPara,
         String observacoes,
+        BigDecimal distanciaKm,
+        BigDecimal valorRepasse,
         String motivoFalha,
         LocalDateTime finalizadaEm,
         Boolean pendenteRevisao,
