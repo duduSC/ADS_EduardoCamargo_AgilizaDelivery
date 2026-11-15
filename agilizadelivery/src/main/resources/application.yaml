@@ -29,3 +29,9 @@ agiliza:
   # Origens do navegador aceitas, separadas por virgula. Vazio: nenhuma.
   cors:
     origens-permitidas: ${CORS_ORIGENS:}
+  # Carga de demonstracao (D009, T010). SO DESENVOLVIMENTO: desligada aqui
+  # e no perfil postgres; ligada no perfil h2. AGILIZA_DEMO=true liga.
+  demo:
+    carga-inicial: ${AGILIZA_DEMO:false}
+    # Senha comum dos usuarios de demonstracao (gravada so como hash BCrypt).
+    senha: ${AGILIZA_DEMO_SENHA:agiliza123}

@@ -1,0 +1,5 @@
+# Nos testes, a carga de demonstracao fica desligada: cada teste monta os
+# proprios dados. Os testes da carga a ligam explicitamente.
+agiliza:
+    demo:
+        carga-inicial: false

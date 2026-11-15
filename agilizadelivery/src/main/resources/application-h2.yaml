@@ -26,3 +26,5 @@ agiliza:
         segredo: ${JWT_SECRET:UQYEmGZe0cmQNCw5EA7y5LrOP10eB3PaBM2+jM7CwlGtoufVjl53W/hLXM8Mreve}
     cors:
         origens-permitidas: ${CORS_ORIGENS:http://localhost:5173}
+    demo:
+        carga-inicial: ${AGILIZA_DEMO:true}
