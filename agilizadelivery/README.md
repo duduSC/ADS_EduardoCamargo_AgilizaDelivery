@@ -12,6 +12,14 @@ Sem nenhuma variável de ambiente, sobe no perfil `h2` (banco em memória, recri
 
 Para o PostgreSQL: `SPRING_PROFILES_ACTIVE=postgres` com `DB_URL`, `DB_USER`, `DB_PASSWORD`, `JWT_SECRET`, `AGILIZA_CPF_CHAVE_CIFRA` e `AGILIZA_CPF_CHAVE_HASH`. A carga de demonstração fica desligada; `AGILIZA_DEMO=true` liga (ela é idempotente).
 
+### Variáveis de ambiente (`.env.example`)
+
+`.env.example` lista todas as variáveis lidas pelos YAML e pelo `compose.yaml`, com finalidade, padrão e formato. Copie para `.env` (ignorado pelo git) e preencha; nunca ponha segredo real no `.env.example`.
+
+- `docker compose up -d` lê o `.env` da pasta sozinho (`DB_NAME`, `DB_USER`, `DB_PASSWORD`).
+- A aplicação **não** lê o `.env`. Exporte as variáveis antes de subir — bash: `set -a; . ./.env; set +a; ./mvnw spring-boot:run` — ou cadastre-as na configuração de execução da IDE (no IntelliJ, por exemplo, o campo *Environment variables* aceita o conteúdo do arquivo).
+- Variável definida vazia anula o padrão do YAML; por isso as opcionais vêm comentadas no arquivo.
+
 ## Carga de demonstração (D009) — SÓ DESENVOLVIMENTO
 
 > **Aviso:** credenciais fixas, públicas e só para desenvolvimento. Nunca ligue a carga em produção.
