@@ -33,6 +33,7 @@ import br.com.agilizadelivery.service.support.EncerramentoLote;
 import br.com.agilizadelivery.service.support.LocalizacaoEntrega;
 import br.com.agilizadelivery.service.support.PoliticaCorrecao;
 import br.com.agilizadelivery.service.support.TransicaoEntrega;
+import br.com.agilizadelivery.websocket.PublicadorTempoReal;
 
 /**
  * Ciclo de vida da entrega (UC01, UC02, UC08) e do seu repasse (DVP 1.5.5).
@@ -55,6 +56,7 @@ public class EntregaServiceImpl implements EntregaService {
     private final EncerramentoLote encerramentoLote;
     private final PoliticaCorrecao politicaCorrecao;
     private final AjusteRepasse ajusteRepasse;
+    private final PublicadorTempoReal publicador;
 
     public EntregaServiceImpl(
             EntregaRepository repository,
@@ -64,7 +66,8 @@ public class EntregaServiceImpl implements EntregaService {
             TransicaoEntrega transicao,
             EncerramentoLote encerramentoLote,
             PoliticaCorrecao politicaCorrecao,
-            AjusteRepasse ajusteRepasse) {
+            AjusteRepasse ajusteRepasse,
+            PublicadorTempoReal publicador) {
         this.repository = repository;
         this.buscador = buscador;
         this.localizacao = localizacao;
@@ -73,6 +76,7 @@ public class EntregaServiceImpl implements EntregaService {
         this.encerramentoLote = encerramentoLote;
         this.politicaCorrecao = politicaCorrecao;
         this.ajusteRepasse = ajusteRepasse;
+        this.publicador = publicador;
     }
 
     /** Pedido avulso, digitado pelo operador (UC01 A2). */
@@ -100,7 +104,9 @@ public class EntregaServiceImpl implements EntregaService {
         localizacao.localizar(entrega);
         Entrega salva = repository.save(entrega);
         transicao.registrarCriacao(salva, null);
-        return DtoMapper.toResponse(salva);
+        EntregaResponse resposta = DtoMapper.toResponse(salva);
+        publicador.publicarEntrega(estabelecimentoId, "CRIADA", resposta);
+        return resposta;
     }
 
     @Override
@@ -118,6 +124,13 @@ public class EntregaServiceImpl implements EntregaService {
     public List<EntregaResponse> listarPendentesDeDespacho(UUID estabelecimentoId) {
         return paraResposta(repository.findByEstabelecimentoIdAndStatusAndPendenteRevisaoFalseOrderByCriadoEmAsc(
                 estabelecimentoId, StatusEntrega.AGUARDANDO_DESPACHO));
+    }
+
+    /** Fila de revisao do estabelecimento (HU01/HU03, S004). */
+    @Override
+    public List<EntregaResponse> listarPendentesDeRevisao(UUID estabelecimentoId) {
+        return paraResposta(repository.findByEstabelecimentoIdAndPendenteRevisaoTrueOrderByCriadoEmAsc(
+                estabelecimentoId));
     }
 
     /** Extrato do entregador no periodo (UC08). */
@@ -182,7 +195,9 @@ public class EntregaServiceImpl implements EntregaService {
 
         Entrega salva = repository.save(entrega);
         encerramentoLote.avaliar(salva.getLote());
-        return DtoMapper.toResponse(salva);
+        EntregaResponse resposta = DtoMapper.toResponse(salva);
+        publicador.publicarEntrega(estabelecimentoId, "STATUS_ALTERADO", resposta);
+        return resposta;
     }
 
     /**
@@ -213,7 +228,9 @@ public class EntregaServiceImpl implements EntregaService {
 
         Entrega salva = repository.save(entrega);
         encerramentoLote.avaliar(salva.getLote());
-        return DtoMapper.toResponse(salva);
+        EntregaResponse resposta = DtoMapper.toResponse(salva);
+        publicador.publicarEntrega(estabelecimentoId, "STATUS_ALTERADO", resposta);
+        return resposta;
     }
 
     /** Reposicionamento manual do pino (UC01 A1, risco R04). */

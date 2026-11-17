@@ -1,0 +1,9 @@
+# Nos testes, a carga de demonstracao fica desligada: cada teste monta os
+# proprios dados. Os testes da carga a ligam explicitamente. O agendamento
+# do worker tambem fica desligado: os testes chamam o ciclo direto.
+agiliza:
+    demo:
+        carga-inicial: false
+    integracao:
+        worker:
+            habilitado: false

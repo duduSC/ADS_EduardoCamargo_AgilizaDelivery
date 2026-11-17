@@ -1,5 +1,8 @@
 package br.com.agilizadelivery.entity.model;
 
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
+
 import br.com.agilizadelivery.entity.model.base.EntidadeBase;
 import java.time.LocalDateTime;
 
@@ -59,6 +62,7 @@ public class Usuario extends EntidadeBase {
 
     @NotNull
     @Enumerated(EnumType.STRING)
+    @JdbcTypeCode(SqlTypes.NAMED_ENUM)
     @Column(name = "perfil", nullable = false, length = 20)
     private PerfilUsuario perfil;
 

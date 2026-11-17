@@ -7,7 +7,6 @@ import java.util.ArrayList;
 import java.util.List;
 
 import br.com.agilizadelivery.entity.model.enums.FormaPagamento;
-import br.com.agilizadelivery.entity.model.enums.Provedor;
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.EnumType;
@@ -49,10 +48,14 @@ import org.hibernate.type.SqlTypes;
                 columnNames = {"provedor", "id_externo"}))
 public class PedidoExterno extends EntidadeDoEstabelecimento {
 
-    @NotNull
-    @Enumerated(EnumType.STRING)
+    /**
+     * Texto livre no banco (DVP 3.0); os valores aceitos e a normalizacao
+     * para maiusculas ficam em service.support.Provedores.
+     */
+    @NotBlank
+    @Size(max = 20)
     @Column(name = "provedor", nullable = false, length = 20)
-    private Provedor provedor;
+    private String provedor;
 
     /** Identificador do pedido no provedor. */
     @NotBlank
@@ -94,6 +97,7 @@ public class PedidoExterno extends EntidadeDoEstabelecimento {
     private BigDecimal valorTotal;
 
     @Enumerated(EnumType.STRING)
+    @JdbcTypeCode(SqlTypes.NAMED_ENUM)
     @Column(name = "forma_pagamento", length = 30)
     private FormaPagamento formaPagamento;
 

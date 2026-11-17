@@ -9,6 +9,7 @@ import org.springframework.stereotype.Repository;
 
 import br.com.agilizadelivery.entity.model.Motoboy;
 import br.com.agilizadelivery.entity.model.enums.StatusCadastroMotoboy;
+import br.com.agilizadelivery.entity.model.enums.StatusDisponibilidadeMotoboy;
 
 /**
  * MotoboyRepository
@@ -37,4 +38,8 @@ public interface MotoboyRepository extends JpaRepository<Motoboy, UUID> {
     List<Motoboy> findByUsuarioEstabelecimentoIdAndStatusCadastro(
             UUID estabelecimentoId,
             StatusCadastroMotoboy statusCadastro);
+
+    List<Motoboy> findByUsuarioEstabelecimentoIdAndStatusDisponibilidade(
+            UUID estabelecimentoId,
+            StatusDisponibilidadeMotoboy statusDisponibilidade);
 }

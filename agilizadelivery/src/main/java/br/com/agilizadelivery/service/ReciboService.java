@@ -26,4 +26,6 @@ public interface ReciboService {
     ReciboResponse marcarComoPago(UUID estabelecimentoId, UUID reciboId, UUID usuarioId);
 
     ReciboResponse cancelar(UUID estabelecimentoId, UUID reciboId, UUID usuarioId, String motivo);
+
+    List<ReciboResponse> listarPorMotoboy(UUID estabelecimentoId, UUID motoboyId);
 }

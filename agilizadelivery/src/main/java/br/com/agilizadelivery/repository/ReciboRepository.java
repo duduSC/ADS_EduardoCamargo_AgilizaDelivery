@@ -37,4 +37,7 @@ public interface ReciboRepository extends JpaRepository<Recibo, UUID> {
             UUID estabelecimentoId,
             UUID motoboyId,
             StatusRecibo status);
+
+    /** Recibos de um entregador, independente de status. */
+    List<Recibo> findByEstabelecimentoIdAndMotoboyId(UUID estabelecimentoId, UUID motoboyId);
 }

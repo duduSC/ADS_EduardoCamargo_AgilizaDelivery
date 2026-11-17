@@ -58,13 +58,16 @@ class MotoboyServiceTest {
     @Mock
     private ProtetorCpf protetorCpf;
 
+    @Mock
+    private br.com.agilizadelivery.websocket.PublicadorTempoReal publicador;
+
     private MotoboyService service;
     private Estabelecimento estabelecimento;
     private Motoboy motoboy;
 
     @BeforeEach
     void setUp() {
-        service = new MotoboyServiceImpl(repository, buscador, cadastroUsuario, protetorCpf);
+        service = new MotoboyServiceImpl(repository, buscador, cadastroUsuario, protetorCpf, publicador);
         estabelecimento = Fixtures.estabelecimento();
         motoboy = Fixtures.motoboy(estabelecimento);
     }
@@ -161,6 +164,7 @@ class MotoboyServiceTest {
                 new AlterarDisponibilidadeMotoboyRequest(StatusDisponibilidadeMotoboy.ONLINE));
 
         assertEquals(StatusDisponibilidadeMotoboy.ONLINE, online.statusDisponibilidade());
+        verify(publicador).publicarFrota(estabelecimento.getId(), "DISPONIBILIDADE_ALTERADA", online);
     }
 
     @Test

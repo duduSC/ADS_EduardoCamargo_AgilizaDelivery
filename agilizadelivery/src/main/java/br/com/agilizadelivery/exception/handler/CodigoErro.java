@@ -48,6 +48,8 @@ public enum CodigoErro {
 
     // 403 / 401 - Seguranca e Multilocacao
     CREDENCIAIS_INVALIDAS,
+    /** PROVISORIO (T004): 401 por token ausente, invalido ou expirado. */
+    NAO_AUTENTICADO,
     ACESSO_NEGADO,
     ESTABELECIMENTO_INATIVO,
     USUARIO_BLOQUEADO,

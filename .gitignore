@@ -53,3 +53,6 @@ application-local.properties
 .DS_Store
 Thumbs.db
 desktop.ini
+
+### Governança do agente backend (decisão do Eduardo, 10/11/2026) ###
+agente_backend/
