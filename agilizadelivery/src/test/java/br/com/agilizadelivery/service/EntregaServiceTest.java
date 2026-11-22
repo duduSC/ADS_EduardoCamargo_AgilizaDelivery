@@ -9,8 +9,10 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.AdditionalAnswers.returnsFirstArg;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.lenient;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
@@ -28,6 +30,8 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import br.com.agilizadelivery.dto.CoordenadaDto;
 import br.com.agilizadelivery.dto.request.AlterarStatusEntregaRequest;
@@ -101,7 +105,8 @@ class EntregaServiceTest {
     @BeforeEach
     void setUp() {
         service = new EntregaServiceImpl(repository, buscador, localizacao, calculadoraRepasse,
-                new TransicaoEntrega(historicoRepository), encerramentoLote, politicaCorrecao, ajusteRepasse, publicador);
+                new TransicaoEntrega(historicoRepository), encerramentoLote, politicaCorrecao, ajusteRepasse, publicador,
+                new TransactionTemplate(mock(PlatformTransactionManager.class)));
         estabelecimento = Fixtures.estabelecimento();
         motoboy = Fixtures.motoboy(estabelecimento);
         lote = Fixtures.lote(estabelecimento, motoboy, StatusLote.EM_ROTA);
@@ -142,7 +147,7 @@ class EntregaServiceTest {
         assertFalse(criada.pagoOnline());
         assertNull(criada.pedidoExternoId());
         assertEquals(reais("-23.56"), criada.coordenada().latitude());
-        verify(localizacao).localizar(any(Entrega.class));
+        verify(localizacao).aplicar(any(Entrega.class), any());
         ArgumentCaptor<EntregaStatusHistorico> historico = ArgumentCaptor.forClass(EntregaStatusHistorico.class);
         verify(historicoRepository).save(historico.capture());
         assertNull(historico.getValue().getStatusAnterior());
@@ -159,7 +164,7 @@ class EntregaServiceTest {
 
         assertNull(criada.coordenada());
         assertTrue(criada.pagoOnline());
-        verify(localizacao).localizar(any(Entrega.class));
+        verify(localizacao).aplicar(any(Entrega.class), any());
     }
 
     @Test
@@ -333,7 +338,7 @@ class EntregaServiceTest {
                 estabelecimento.getId(), entrega.getId(), reais("-23.6"), reais("-46.7"), operador.getId());
 
         assertEquals(reais("-23.6"), ajustada.coordenada().latitude());
-        verify(localizacao).localizar(entrega);
+        verify(localizacao).aplicar(eq(entrega), any());
         verify(encerramentoLote).atualizarTotal(lote);
     }
 

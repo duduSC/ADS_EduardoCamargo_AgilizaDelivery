@@ -15,6 +15,7 @@ import jakarta.persistence.FetchType;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
+import jakarta.persistence.UniqueConstraint;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -36,7 +37,9 @@ import lombok.Setter;
 @NoArgsConstructor
 @AllArgsConstructor
 @Entity
-@Table(name = "usuario")
+@Table(
+        name = "usuario",
+        uniqueConstraints = @UniqueConstraint(name = "uk_usuario_login_email", columnNames = "login_email"))
 public class Usuario extends EntidadeBase {
 
     /** Nulo apenas para ADMIN_GERAL, que nao pertence a nenhuma loja. */
@@ -52,7 +55,7 @@ public class Usuario extends EntidadeBase {
     @NotBlank
     @Email
     @Size(max = 150)
-    @Column(name = "login_email", nullable = false, unique = true, length = 150)
+    @Column(name = "login_email", nullable = false, length = 150)
     private String loginEmail;
 
     /** Hash BCrypt, nunca a senha em texto claro (RNF02). */

@@ -7,6 +7,7 @@ import br.com.agilizadelivery.entity.model.embeddable.Coordenada;
 import java.time.LocalDateTime;
 
 import br.com.agilizadelivery.entity.model.enums.StatusEntrega;
+import br.com.agilizadelivery.tempo.HorarioLocal;
 import jakarta.persistence.Column;
 import jakarta.persistence.Embedded;
 import jakarta.persistence.EnumType;
@@ -86,7 +87,7 @@ public class EntregaStatusHistorico {
     @PrePersist
     protected void aoCriar() {
         if (this.registradoEm == null) {
-            this.registradoEm = LocalDateTime.now();
+            this.registradoEm = HorarioLocal.agora();
         }
     }
 }

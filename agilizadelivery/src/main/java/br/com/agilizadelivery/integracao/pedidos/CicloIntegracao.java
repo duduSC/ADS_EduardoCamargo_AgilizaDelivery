@@ -1,7 +1,6 @@
 package br.com.agilizadelivery.integracao.pedidos;
 
 import java.time.Duration;
-import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
@@ -18,6 +17,7 @@ import br.com.agilizadelivery.entity.model.enums.StatusFalhaIntegracao;
 import br.com.agilizadelivery.repository.ConfiguracaoIntegracaoRepository;
 import br.com.agilizadelivery.repository.FalhaIntegracaoRepository;
 import br.com.agilizadelivery.service.support.ImportacaoPedido;
+import br.com.agilizadelivery.tempo.HorarioLocal;
 import lombok.extern.slf4j.Slf4j;
 
 /**
@@ -70,7 +70,7 @@ public class CicloIntegracao {
                 processar(configuracao, provedor);
             } catch (RuntimeException e) {
                 log.error("Erro inesperado no ciclo de integração da configuração {}: {}",
-                        configuracao.getId(), e.getMessage());
+                        configuracao.getId(), e.getClass().getSimpleName());
             }
         }
     }
@@ -83,7 +83,7 @@ public class CicloIntegracao {
             registrarFalha(configuracao, null, EtapaFalhaIntegracao.CONSULTA, e, null);
             return;
         }
-        configuracaoRepository.registrarPolling(configuracao.getId(), LocalDateTime.now());
+        configuracaoRepository.registrarPolling(configuracao.getId(), HorarioLocal.agora());
 
         for (PedidoRecebido pedido : pedidos) {
             boolean importado;
@@ -142,7 +142,7 @@ public class CicloIntegracao {
             EtapaFalhaIntegracao etapa, TentativasEsgotadas erro, String payloadJson) {
         log.warn("Integração {} da loja {}: etapa {} falhou após {} tentativas (pedido {}): {}",
                 configuracao.getProvedor(), configuracao.getEstabelecimento().getId(), etapa, erro.tentativas,
-                idExterno, erro.getMessage());
+                idExterno, erro.tipoDaCausa());
         FalhaIntegracao falha = new FalhaIntegracao();
         falha.setConfiguracaoIntegracao(configuracao);
         falha.setIdExterno(idExterno);
@@ -151,7 +151,7 @@ public class CicloIntegracao {
         falha.setTentativas((short) erro.tentativas);
         falha.setPayloadJson(payloadJson);
         falha.setStatus(StatusFalhaIntegracao.PENDENTE);
-        falha.setOcorridoEm(LocalDateTime.now());
+        falha.setOcorridoEm(HorarioLocal.agora());
         falhaRepository.save(falha);
     }
 
@@ -163,6 +163,11 @@ public class CicloIntegracao {
         TentativasEsgotadas(int tentativas, RuntimeException causa) {
             super(mensagem(causa), causa);
             this.tentativas = tentativas;
+        }
+
+        /** Para o log: a mensagem do banco traz os valores da linha (telefone do cliente). */
+        String tipoDaCausa() {
+            return getCause() == null ? "sem detalhe" : getCause().getClass().getSimpleName();
         }
 
         private static String mensagem(RuntimeException causa) {

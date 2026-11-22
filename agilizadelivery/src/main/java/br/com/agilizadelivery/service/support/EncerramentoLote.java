@@ -1,7 +1,6 @@
 package br.com.agilizadelivery.service.support;
 
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Objects;
 
@@ -16,6 +15,7 @@ import br.com.agilizadelivery.entity.model.enums.StatusLote;
 import br.com.agilizadelivery.repository.EntregaRepository;
 import br.com.agilizadelivery.repository.LoteEntregaRepository;
 import br.com.agilizadelivery.repository.MotoboyRepository;
+import br.com.agilizadelivery.tempo.HorarioLocal;
 import br.com.agilizadelivery.websocket.PublicadorTempoReal;
 
 /**
@@ -58,7 +58,7 @@ public class EncerramentoLote {
         }
 
         lote.setStatus(lote.getStatus() == StatusLote.EM_ROTA ? StatusLote.CONCLUIDO : StatusLote.CANCELADO);
-        lote.setConcluidoEm(LocalDateTime.now());
+        lote.setConcluidoEm(HorarioLocal.agora());
         loteRepository.save(lote);
         liberarMotoboy(lote);
     }

@@ -141,6 +141,8 @@ class MotoboyServiceTest {
 
         assertEquals(StatusCadastroMotoboy.BLOQUEADO, bloqueado.statusCadastro());
         assertEquals(StatusDisponibilidadeMotoboy.OFFLINE, bloqueado.statusDisponibilidade());
+        // o monitoramento precisa ver o entregador sair (RNF06)
+        verify(publicador).publicarFrota(estabelecimento.getId(), "DISPONIBILIDADE_ALTERADA", bloqueado);
     }
 
     @Test

@@ -46,6 +46,7 @@ public class EntregaAjusteValorServiceImpl implements EntregaAjusteValorService 
             UUID entregaId,
             UUID usuarioId,
             AjustarRepasseRequest request) {
+        buscador.travarLoja(estabelecimentoId);
         Entrega entrega = entregaRepository.findByIdAndEstabelecimentoId(entregaId, estabelecimentoId)
                 .orElseThrow(() -> EntidadeNaoEncontradaException.porId(Entrega.class, entregaId));
         Usuario autor = buscador.usuarioComPerfil(

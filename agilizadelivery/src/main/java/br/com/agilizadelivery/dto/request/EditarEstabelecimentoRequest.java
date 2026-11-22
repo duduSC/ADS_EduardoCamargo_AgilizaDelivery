@@ -2,6 +2,7 @@ package br.com.agilizadelivery.dto.request;
 
 import java.math.BigDecimal;
 
+import jakarta.validation.constraints.Digits;
 import jakarta.validation.constraints.Positive;
 import jakarta.validation.constraints.PositiveOrZero;
 import jakarta.validation.constraints.Size;
@@ -12,6 +13,6 @@ import jakarta.validation.constraints.Size;
  */
 public record EditarEstabelecimentoRequest(
         @Positive Short maxPedidosPorLote,
-        @PositiveOrZero BigDecimal valorRepasseForaDeArea,
+        @PositiveOrZero @Digits(integer = 8, fraction = 2) BigDecimal valorRepasseForaDeArea,
         @Size(max = 15) String telefone) {
 }

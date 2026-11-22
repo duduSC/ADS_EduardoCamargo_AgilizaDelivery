@@ -4,6 +4,7 @@ import java.time.LocalDateTime;
 
 import br.com.agilizadelivery.entity.model.enums.EtapaFalhaIntegracao;
 import br.com.agilizadelivery.entity.model.enums.StatusFalhaIntegracao;
+import br.com.agilizadelivery.tempo.HorarioLocal;
 import jakarta.persistence.Column;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
@@ -96,7 +97,7 @@ public class FalhaIntegracao {
     @PrePersist
     protected void aoCriar() {
         if (this.ocorridoEm == null) {
-            this.ocorridoEm = LocalDateTime.now();
+            this.ocorridoEm = HorarioLocal.agora();
         }
     }
 }

@@ -20,6 +20,7 @@ import br.com.agilizadelivery.exception.EntidadeNaoEncontradaException;
 import br.com.agilizadelivery.repository.EstabelecimentoRepository;
 import br.com.agilizadelivery.service.EstabelecimentoService;
 import br.com.agilizadelivery.service.support.CadastroUsuario;
+import br.com.agilizadelivery.service.support.Coordenadas;
 
 @Service
 @Transactional(readOnly = true)
@@ -40,17 +41,19 @@ public class EstabelecimentoServiceImpl implements EstabelecimentoService {
     @Override
     @Transactional
     public EstabelecimentoResponse criar(CriarEstabelecimentoRequest request) {
-        if (repository.existsByCnpj(request.cnpj())) {
-            throw new CnpjJaCadastradoException(request.cnpj());
+        // gravado so com digitos (DVP 1.5.4): formatado nao cabe na coluna e burlaria a unicidade
+        String cnpj = request.cnpj().replaceAll("\\D", "");
+        if (repository.existsByCnpj(cnpj)) {
+            throw new CnpjJaCadastradoException(cnpj);
         }
 
-        Coordenada coordenada = new Coordenada(
+        Coordenada coordenada = Coordenadas.validada(
                 request.coordenada().latitude(),
                 request.coordenada().longitude());
         Estabelecimento estabelecimento = new Estabelecimento();
         estabelecimento.setRazaoSocial(request.razaoSocial());
         estabelecimento.setNomeFantasia(request.nomeFantasia());
-        estabelecimento.setCnpj(request.cnpj());
+        estabelecimento.setCnpj(cnpj);
         estabelecimento.setTelefone(request.telefone());
         estabelecimento.setEnderecoCompleto(request.enderecoCompleto());
         estabelecimento.setCoordenada(coordenada);

@@ -1,7 +1,8 @@
 # PostgreSQL 16 para desenvolvimento local (perfil "postgres").
 # Os valores vem das mesmas variaveis do perfil: DB_NAME, DB_USER e
-# DB_PASSWORD. Os padroes abaixo sao so para a maquina de desenvolvimento,
-# nunca para producao. A aplicacao usa DB_URL, por exemplo:
+# DB_PASSWORD. DB_PASSWORD e obrigatoria: sem ela o compose nao sobe. Os
+# outros padroes sao so para a maquina de desenvolvimento. A aplicacao usa
+# DB_URL, por exemplo:
 #   DB_URL=jdbc:postgresql://localhost:5432/agiliza
 services:
   postgres:
@@ -9,6 +10,6 @@ services:
     environment:
       - 'POSTGRES_DB=${DB_NAME:-agiliza}'
       - 'POSTGRES_USER=${DB_USER:-agiliza}'
-      - 'POSTGRES_PASSWORD=${DB_PASSWORD:-agiliza_dev}'
+      - 'POSTGRES_PASSWORD=${DB_PASSWORD:?defina DB_PASSWORD no ambiente ou no .env}'
     ports:
       - '5432:5432'

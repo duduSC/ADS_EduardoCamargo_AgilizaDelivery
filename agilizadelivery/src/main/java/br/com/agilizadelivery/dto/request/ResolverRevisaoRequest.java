@@ -2,6 +2,7 @@ package br.com.agilizadelivery.dto.request;
 
 import java.math.BigDecimal;
 
+import jakarta.validation.constraints.Digits;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.PositiveOrZero;
 import jakarta.validation.constraints.Size;
@@ -12,6 +13,6 @@ import jakarta.validation.constraints.Size;
  * limpa a pendencia.
  */
 public record ResolverRevisaoRequest(
-        @PositiveOrZero BigDecimal valorRepasse,
+        @PositiveOrZero @Digits(integer = 8, fraction = 2) BigDecimal valorRepasse,
         @NotBlank @Size(max = 100) String motivo) {
 }

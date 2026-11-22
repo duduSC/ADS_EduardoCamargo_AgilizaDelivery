@@ -39,6 +39,7 @@ public class DistanciaPrecoServiceImpl implements DistanciaPrecoService {
     public List<DistanciaPrecoResponse> substituirTabela(
             UUID estabelecimentoId,
             List<SalvarDistanciaPrecoRequest> faixas) {
+        buscador.travarLoja(estabelecimentoId);
         Estabelecimento estabelecimento = buscador.estabelecimentoAtivo(estabelecimentoId);
 
         List<SalvarDistanciaPrecoRequest> ordenadas = validarEOrdenar(faixas);

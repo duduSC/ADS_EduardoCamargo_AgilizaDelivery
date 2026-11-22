@@ -8,8 +8,39 @@ spring:
     active: h2
   jpa:
     open-in-view: false
+  datasource:
+    hikari:
+      # sem conexao em 10 s a resposta e 503 (o padrao e esperar 30 s)
+      connection-timeout: 10000
+  # Explicitos porque o devtools liga os quatro por padrao (Constituicao 6.1 a 6.4).
+  mvc:
+    # ligado, escreve no log o valor rejeitado pela validacao: CPF, senha, telefone
+    log-resolved-exception: false
+  web:
+    error:
+      include-stacktrace: never
+      include-message: never
+      include-binding-errors: never
+
+logging:
+  level:
+    # a mensagem de erro SQL do Hibernate traz os valores da linha
+    org.hibernate.orm.jdbc.error: "off"
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+  endpoint:
+    health:
+      show-details: never
+      show-components: never
 
 agiliza:
+  http:
+    # PROVISORIO (T014): corpo maior responde 413.
+    tamanho-maximo-corpo: 1MB
   maps:
     api-key: ${GOOGLE_MAPS_API_KEY:}
     routes-url: https://routes.googleapis.com/directions/v2:computeRoutes

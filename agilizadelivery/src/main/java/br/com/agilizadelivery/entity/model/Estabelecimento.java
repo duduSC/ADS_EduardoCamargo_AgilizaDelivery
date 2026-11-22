@@ -1,5 +1,6 @@
 package br.com.agilizadelivery.entity.model;
 
+import org.hibernate.annotations.DynamicUpdate;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
 
@@ -15,6 +16,7 @@ import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Table;
+import jakarta.persistence.UniqueConstraint;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -38,7 +40,12 @@ import org.hibernate.validator.constraints.br.CNPJ;
 @NoArgsConstructor
 @AllArgsConstructor
 @Entity
-@Table(name = "estabelecimento")
+// Editar parametros grava so o que mudou e nao desfaz a inativacao
+// feita pelo Administrador Geral ao mesmo tempo.
+@DynamicUpdate
+@Table(
+        name = "estabelecimento",
+        uniqueConstraints = @UniqueConstraint(name = "uk_estabelecimento_cnpj", columnNames = "cnpj"))
 public class Estabelecimento extends EntidadeBase {
 
     @NotBlank
@@ -53,7 +60,7 @@ public class Estabelecimento extends EntidadeBase {
 
     /** Somente digitos. Unico no sistema (HU11). */
     @CNPJ
-    @Column(name = "cnpj", nullable = false, unique = true, length = 14)
+    @Column(name = "cnpj", nullable = false, length = 14)
     private String cnpj;
 
     @Size(max = 15)

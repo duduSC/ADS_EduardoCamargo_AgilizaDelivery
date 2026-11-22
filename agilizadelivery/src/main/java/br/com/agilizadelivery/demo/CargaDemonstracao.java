@@ -37,6 +37,7 @@ import br.com.agilizadelivery.service.MotoboyService;
 import br.com.agilizadelivery.service.UsuarioService;
 import br.com.agilizadelivery.service.support.CadastroUsuario;
 import br.com.agilizadelivery.service.support.Provedores;
+import br.com.agilizadelivery.tempo.HorarioLocal;
 import lombok.extern.slf4j.Slf4j;
 
 /**
@@ -183,7 +184,7 @@ public class CargaDemonstracao implements ApplicationRunner {
         if (!distanciaPrecoService.listarFaixasAtivas(lojaId).isEmpty()) {
             return;
         }
-        LocalDate hoje = LocalDate.now();
+        LocalDate hoje = HorarioLocal.hoje();
         distanciaPrecoService.substituirTabela(lojaId, List.of(
                 new SalvarDistanciaPrecoRequest(BigDecimal.ZERO, new BigDecimal("3.00"), new BigDecimal("9.00"), hoje),
                 new SalvarDistanciaPrecoRequest(new BigDecimal("3.00"), new BigDecimal("5.00"), new BigDecimal("12.00"), hoje),
@@ -191,7 +192,7 @@ public class CargaDemonstracao implements ApplicationRunner {
     }
 
     private void abrirCaixaDoDia(UUID lojaId) {
-        LocalDate hoje = LocalDate.now();
+        LocalDate hoje = HorarioLocal.hoje();
         if (!caixaRepository.existsByEstabelecimentoIdAndDataReferencia(lojaId, hoje)) {
             caixaService.abrirCaixa(lojaId, new AbrirCaixaRequest(hoje));
         }

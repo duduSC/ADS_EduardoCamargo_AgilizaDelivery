@@ -39,6 +39,8 @@ import br.com.agilizadelivery.service.EntregadorService;
 import br.com.agilizadelivery.service.ExtratoAcertoService;
 import br.com.agilizadelivery.service.LoteEntregaService;
 import br.com.agilizadelivery.service.MotoboyService;
+import br.com.agilizadelivery.service.support.BuscadorTenant;
+import br.com.agilizadelivery.tempo.HorarioLocal;
 
 /**
  * Fachada do aplicativo do entregador (D008). Resolve o entregador a partir
@@ -57,6 +59,7 @@ public class EntregadorServiceImpl implements EntregadorService {
     private final LoteEntregaService loteService;
     private final EntregaService entregaService;
     private final ExtratoAcertoService extratoService;
+    private final BuscadorTenant buscador;
 
     public EntregadorServiceImpl(
             MotoboyRepository motoboyRepository,
@@ -66,7 +69,8 @@ public class EntregadorServiceImpl implements EntregadorService {
             MotoboyService motoboyService,
             LoteEntregaService loteService,
             EntregaService entregaService,
-            ExtratoAcertoService extratoService) {
+            ExtratoAcertoService extratoService,
+            BuscadorTenant buscador) {
         this.motoboyRepository = motoboyRepository;
         this.loteRepository = loteRepository;
         this.entregaRepository = entregaRepository;
@@ -75,6 +79,7 @@ public class EntregadorServiceImpl implements EntregadorService {
         this.loteService = loteService;
         this.entregaService = entregaService;
         this.extratoService = extratoService;
+        this.buscador = buscador;
     }
 
     @Override
@@ -96,6 +101,7 @@ public class EntregadorServiceImpl implements EntregadorService {
     @Transactional
     public MotoboyResponse alterarDisponibilidade(
             UUID estabelecimentoId, UUID usuarioId, AlterarDisponibilidadeMotoboyRequest request) {
+        buscador.travarLoja(estabelecimentoId);
         if (request.status() == StatusDisponibilidadeMotoboy.EM_ROTA) {
             throw new RequisicaoInvalidaException(
                     "O entregador só pode informar ONLINE ou OFFLINE; EM_ROTA é definido pelo lote.");
@@ -128,6 +134,7 @@ public class EntregadorServiceImpl implements EntregadorService {
     @Override
     @Transactional
     public LoteDoEntregadorResponse iniciarLote(UUID estabelecimentoId, UUID usuarioId, UUID loteId) {
+        buscador.travarLoja(estabelecimentoId);
         UUID motoboyId = motoboyDoUsuario(estabelecimentoId, usuarioId);
         LoteEntrega lote = loteDoEntregador(estabelecimentoId, motoboyId, loteId);
         loteService.iniciarRota(estabelecimentoId, loteId, motoboyId);
@@ -143,6 +150,7 @@ public class EntregadorServiceImpl implements EntregadorService {
     @Transactional
     public EntregaDoEntregadorResponse alterarStatusEntrega(
             UUID estabelecimentoId, UUID usuarioId, UUID entregaId, AlterarStatusEntregaRequest request) {
+        buscador.travarLoja(estabelecimentoId);
         UUID motoboyId = motoboyDoUsuario(estabelecimentoId, usuarioId);
         Entrega entrega = entregaDoEntregador(estabelecimentoId, motoboyId, entregaId);
         entregaService.alterarStatus(estabelecimentoId, entregaId, usuarioId, request);
@@ -153,6 +161,7 @@ public class EntregadorServiceImpl implements EntregadorService {
     @Override
     @Transactional
     public EntregaDoEntregadorResponse contestar(UUID estabelecimentoId, UUID usuarioId, UUID entregaId) {
+        buscador.travarLoja(estabelecimentoId);
         UUID motoboyId = motoboyDoUsuario(estabelecimentoId, usuarioId);
         Entrega entrega = entregaDoEntregador(estabelecimentoId, motoboyId, entregaId);
         entregaService.contestar(estabelecimentoId, entregaId, motoboyId);
@@ -178,7 +187,7 @@ public class EntregadorServiceImpl implements EntregadorService {
         LocalDateTime de = inicio;
         LocalDateTime ate = fim;
         if (de == null) {
-            LocalDate hoje = LocalDate.now();
+            LocalDate hoje = HorarioLocal.hoje();
             de = hoje.atStartOfDay();
             ate = hoje.atTime(LocalTime.MAX);
         }
@@ -232,7 +241,7 @@ public class EntregadorServiceImpl implements EntregadorService {
 
     private LoteDoEntregadorResponse montarLote(LoteEntrega lote) {
         List<EntregaDoEntregadorResponse> entregas = entregaRepository
-                .findByLoteIdOrderByOrdemRotaAsc(lote.getId()).stream()
+                .findDoLoteComItens(lote.getId()).stream()
                 .map(EntregadorServiceImpl::montarEntrega)
                 .toList();
         return new LoteDoEntregadorResponse(

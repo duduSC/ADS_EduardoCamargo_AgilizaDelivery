@@ -21,6 +21,7 @@ import br.com.agilizadelivery.dto.response.ReciboResponse;
 import br.com.agilizadelivery.seguranca.Perfis;
 import br.com.agilizadelivery.seguranca.jwt.UsuarioLogado;
 import br.com.agilizadelivery.service.ReciboService;
+import br.com.agilizadelivery.tempo.HorarioLocal;
 import jakarta.validation.Valid;
 
 /**
@@ -73,7 +74,7 @@ public class ReciboController {
             return reciboService.listarPorMotoboy(estabelecimentoId, motoboyId);
         }
         // Sem filtro: lista pelo caixa do dia via dataReferencia atual
-        return reciboService.listarPorDataReferencia(estabelecimentoId, java.time.LocalDate.now());
+        return reciboService.listarPorDataReferencia(estabelecimentoId, HorarioLocal.hoje());
     }
 
     @GetMapping("/{id}")

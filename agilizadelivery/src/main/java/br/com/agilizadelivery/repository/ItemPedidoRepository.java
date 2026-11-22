@@ -20,9 +20,6 @@ import br.com.agilizadelivery.entity.model.ItemPedido;
 @Repository
 public interface ItemPedidoRepository extends JpaRepository<ItemPedido, Long> {
 
-    /** Itens de um pedido, para conferencia da sacola (UC02). */
-    List<ItemPedido> findByPedidoExternoId(UUID pedidoExternoId);
-
     List<ItemPedido> findByPedidoExternoEstabelecimentoIdAndPedidoExternoId(
             UUID estabelecimentoId,
             UUID pedidoExternoId);

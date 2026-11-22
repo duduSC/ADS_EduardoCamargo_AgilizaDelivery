@@ -7,6 +7,9 @@ spring:
         username: ${DB_USER}
         password: ${DB_PASSWORD}
         driver-class-name: org.postgresql.Driver
+        hikari:
+            # espera por trava de loja tem limite (T014): depois, 409
+            connection-init-sql: SET lock_timeout TO '10s'
     jpa:
         hibernate:
             ddl-auto: validate

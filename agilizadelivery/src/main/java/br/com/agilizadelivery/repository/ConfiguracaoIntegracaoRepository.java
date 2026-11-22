@@ -30,9 +30,6 @@ public interface ConfiguracaoIntegracaoRepository extends JpaRepository<Configur
 
     Optional<ConfiguracaoIntegracao> findByIdAndEstabelecimentoId(UUID id, UUID estabelecimentoId);
 
-    /** Alimenta o ciclo de polling do worker, a cada 30 segundos (DVP 1.5.6). */
-    List<ConfiguracaoIntegracao> findByAtivoTrue();
-
     /**
      * Configuracoes ativas com a loja ja carregada, para o worker ler a
      * loja fora de transacao (T011).

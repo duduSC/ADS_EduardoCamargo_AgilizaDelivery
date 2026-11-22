@@ -1,10 +1,9 @@
 package br.com.agilizadelivery.service.support;
 
-import java.time.LocalDateTime;
 import java.util.Optional;
 
 import org.springframework.stereotype.Component;
-import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import br.com.agilizadelivery.dto.DtoMapper;
 import br.com.agilizadelivery.dto.response.EntregaResponse;
@@ -18,14 +17,16 @@ import br.com.agilizadelivery.entity.model.enums.StatusEntrega;
 import br.com.agilizadelivery.integracao.pedidos.PedidoRecebido;
 import br.com.agilizadelivery.repository.EntregaRepository;
 import br.com.agilizadelivery.repository.PedidoExternoRepository;
+import br.com.agilizadelivery.service.support.LocalizacaoEntrega.Posicao;
+import br.com.agilizadelivery.tempo.HorarioLocal;
 import br.com.agilizadelivery.websocket.PublicadorTempoReal;
 
 /**
  * Importacao de um pedido do provedor em PEDIDO_EXTERNO + ENTREGA (DVP
  * 1.5.6, passos 2, 3, 5 e 6; HU03).
  *
- * Tudo numa transacao: ou o pedido e a entrega sao gravados juntos, ou
- * nada e gravado e o worker repete (RNF04).
+ * O mapa e consultado antes; a gravacao e uma transacao so: ou o pedido e
+ * a entrega sao gravados juntos, ou nada e gravado e o worker repete (RNF04).
  */
 @Component
 public class ImportacaoPedido {
@@ -36,6 +37,7 @@ public class ImportacaoPedido {
     private final LocalizacaoEntrega localizacao;
     private final TransicaoEntrega transicao;
     private final PublicadorTempoReal publicador;
+    private final TransactionTemplate transacao;
 
     public ImportacaoPedido(
             PedidoExternoRepository pedidoRepository,
@@ -43,20 +45,21 @@ public class ImportacaoPedido {
             BuscadorTenant buscador,
             LocalizacaoEntrega localizacao,
             TransicaoEntrega transicao,
-            PublicadorTempoReal publicador) {
+            PublicadorTempoReal publicador,
+            TransactionTemplate transacao) {
         this.pedidoRepository = pedidoRepository;
         this.entregaRepository = entregaRepository;
         this.buscador = buscador;
         this.localizacao = localizacao;
         this.transicao = transicao;
         this.publicador = publicador;
+        this.transacao = transacao;
     }
 
     /**
      * Importa o pedido e cria a entrega AGUARDANDO_DESPACHO. Vazio quando o
      * par (provedor, id_externo) ja existe: o pedido e descartado (HU03).
      */
-    @Transactional
     public Optional<EntregaResponse> importar(ConfiguracaoIntegracao configuracao, PedidoRecebido recebido) {
         String provedor = Provedores.normalizar(configuracao.getProvedor());
         if (pedidoRepository.existsByProvedorAndIdExterno(provedor, recebido.idExterno())) {
@@ -66,15 +69,20 @@ public class ImportacaoPedido {
 
         PedidoExterno pedido = pedidoExterno(provedor, loja, recebido);
         Entrega entrega = entrega(loja, pedido, recebido);
-        localizacao.localizar(entrega);
-        pedido.setProcessadoEm(LocalDateTime.now());
-        pedidoRepository.save(pedido);
+        Posicao posicao = localizacao.consultar(
+                entrega.getCoordenada(), entrega.getEnderecoCompleto(), loja.getCoordenada());
+        // importado por outro processo nesse meio-tempo: a UNIQUE desfaz tudo e a repeticao o descarta
+        return Optional.ofNullable(transacao.execute(status -> {
+            localizacao.aplicar(entrega, posicao);
+            pedido.setProcessadoEm(HorarioLocal.agora());
+            pedidoRepository.save(pedido);
 
-        Entrega salva = entregaRepository.save(entrega);
-        transicao.registrarCriacao(salva, null);
-        EntregaResponse resposta = DtoMapper.toResponse(salva);
-        publicador.publicarEntrega(loja.getId(), "CRIADA", resposta);
-        return Optional.of(resposta);
+            Entrega salva = entregaRepository.save(entrega);
+            transicao.registrarCriacao(salva, null);
+            EntregaResponse resposta = DtoMapper.toResponse(salva);
+            publicador.publicarEntrega(loja.getId(), "CRIADA", resposta);
+            return resposta;
+        }));
     }
 
     private static PedidoExterno pedidoExterno(String provedor, Estabelecimento loja, PedidoRecebido recebido) {

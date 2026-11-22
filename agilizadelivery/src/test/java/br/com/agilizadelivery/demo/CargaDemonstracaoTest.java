@@ -8,7 +8,6 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import java.math.BigDecimal;
-import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
 
@@ -39,6 +38,7 @@ import br.com.agilizadelivery.repository.EstabelecimentoRepository;
 import br.com.agilizadelivery.repository.MotoboyRepository;
 import br.com.agilizadelivery.repository.UsuarioRepository;
 import br.com.agilizadelivery.service.support.Provedores;
+import br.com.agilizadelivery.tempo.HorarioLocal;
 
 /**
  * Carga de demonstracao (T010, D009). Banco H2 proprio, para os dados
@@ -106,7 +106,7 @@ class CargaDemonstracaoTest {
                 .first()
                 .satisfies(faixa -> assertThat(faixa.getDeKm()).isEqualByComparingTo(BigDecimal.ZERO));
 
-        assertThat(caixaRepository.findByEstabelecimentoIdAndDataReferencia(loja.getId(), LocalDate.now()))
+        assertThat(caixaRepository.findByEstabelecimentoIdAndDataReferencia(loja.getId(), HorarioLocal.hoje()))
                 .get()
                 .satisfies(caixa -> assertThat(caixa.getStatus()).isEqualTo(StatusCaixa.ABERTO));
     }

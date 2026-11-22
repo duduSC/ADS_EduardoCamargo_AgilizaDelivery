@@ -1,6 +1,5 @@
 package br.com.agilizadelivery.service.impl;
 
-import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
 
@@ -15,6 +14,7 @@ import br.com.agilizadelivery.exception.EntidadeNaoEncontradaException;
 import br.com.agilizadelivery.exception.RegraDeNegocioException;
 import br.com.agilizadelivery.repository.FalhaIntegracaoRepository;
 import br.com.agilizadelivery.service.FalhaIntegracaoService;
+import br.com.agilizadelivery.tempo.HorarioLocal;
 
 @Service
 @Transactional(readOnly = true)
@@ -47,7 +47,7 @@ public class FalhaIntegracaoServiceImpl implements FalhaIntegracaoService {
         FalhaIntegracao falha = buscarPorEstabelecimento(estabelecimentoId, falhaId);
         validarPendente(falha);
         falha.setStatus(StatusFalhaIntegracao.REPROCESSADA);
-        falha.setResolvidoEm(LocalDateTime.now());
+        falha.setResolvidoEm(HorarioLocal.agora());
         return DtoMapper.toResponse(repository.save(falha));
     }
 
@@ -57,7 +57,7 @@ public class FalhaIntegracaoServiceImpl implements FalhaIntegracaoService {
         FalhaIntegracao falha = buscarPorEstabelecimento(estabelecimentoId, falhaId);
         validarPendente(falha);
         falha.setStatus(StatusFalhaIntegracao.DESCARTADA);
-        falha.setResolvidoEm(LocalDateTime.now());
+        falha.setResolvidoEm(HorarioLocal.agora());
         return DtoMapper.toResponse(repository.save(falha));
     }
 

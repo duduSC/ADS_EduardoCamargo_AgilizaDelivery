@@ -3,6 +3,8 @@ package br.com.agilizadelivery.service.impl;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Objects;
+import java.util.Optional;
 import java.util.UUID;
 
 import org.springframework.stereotype.Service;
@@ -30,6 +32,7 @@ import br.com.agilizadelivery.repository.ReciboRepository;
 import br.com.agilizadelivery.service.ReciboService;
 import br.com.agilizadelivery.service.support.BuscadorTenant;
 import br.com.agilizadelivery.service.support.EncerramentoLote;
+import br.com.agilizadelivery.tempo.HorarioLocal;
 import lombok.extern.slf4j.Slf4j;
 
 /**
@@ -64,6 +67,7 @@ public class ReciboServiceImpl implements ReciboService {
     @Override
     @Transactional
     public ReciboResponse gerar(UUID estabelecimentoId, UUID usuarioGeradorId, GerarReciboRequest request) {
+        buscador.travarLoja(estabelecimentoId);
         if (!request.periodoFim().isAfter(request.periodoInicio())) {
             throw new RegraDeNegocioException("O fim do período deve ser posterior ao início.");
         }
@@ -82,6 +86,9 @@ public class ReciboServiceImpl implements ReciboService {
             throw new RegraDeNegocioException(
                     "Não há entregas finalizadas, sem revisão pendente e fora de recibo no período informado.");
         }
+        diaFechado(estabelecimentoId, aptas).ifPresent(dia -> {
+            throw new CaixaFechadoException("gerar recibo com entregas de " + dia);
+        });
         aptas.stream()
                 .filter(entrega -> entrega.getValorRepasse() == null)
                 .findFirst()
@@ -135,6 +142,7 @@ public class ReciboServiceImpl implements ReciboService {
     @Override
     @Transactional
     public ReciboResponse marcarComoPago(UUID estabelecimentoId, UUID reciboId, UUID usuarioId) {
+        buscador.travarLoja(estabelecimentoId);
         Recibo recibo = buscar(estabelecimentoId, reciboId);
         buscador.usuarioComPerfil(estabelecimentoId, usuarioId, PerfilUsuario.OPERADOR, PerfilUsuario.ADMIN_RESTAURANTE);
         if (recibo.getStatus() != StatusRecibo.GERADO) {
@@ -144,7 +152,7 @@ public class ReciboServiceImpl implements ReciboService {
             throw new CaixaFechadoException("marcar o recibo como pago");
         }
         recibo.setStatus(StatusRecibo.PAGO);
-        recibo.setPagoEm(LocalDateTime.now());
+        recibo.setPagoEm(HorarioLocal.agora());
         return DtoMapper.toResponse(repository.save(recibo));
     }
 
@@ -152,6 +160,7 @@ public class ReciboServiceImpl implements ReciboService {
     @Override
     @Transactional
     public ReciboResponse cancelar(UUID estabelecimentoId, UUID reciboId, UUID usuarioId, String motivo) {
+        buscador.travarLoja(estabelecimentoId);
         if (motivo == null || motivo.isBlank()) {
             throw new RegraDeNegocioException("O motivo do cancelamento do recibo é obrigatório.");
         }
@@ -165,6 +174,9 @@ public class ReciboServiceImpl implements ReciboService {
         }
 
         List<Entrega> entregas = entregaRepository.findByReciboId(recibo.getId());
+        diaFechado(estabelecimentoId, entregas).ifPresent(dia -> {
+            throw new ReciboInalteravelException("ele tem entregas de " + dia + ", cujo caixa já está fechado");
+        });
         entregas.forEach(entrega -> entrega.setRecibo(null));
         entregaRepository.saveAll(entregas);
 
@@ -186,6 +198,23 @@ public class ReciboServiceImpl implements ReciboService {
             throw new CaixaFechadoException("gerar recibo de acerto");
         }
         return caixa;
+    }
+
+    /**
+     * Um periodo de varios dias pode alcancar um dia ja fechado, cujas
+     * entregas sao imutaveis (Constituicao 5.4): nem entram em recibo, nem
+     * saem dele. Dia sem caixa nao esta fechado.
+     */
+    private Optional<LocalDate> diaFechado(UUID estabelecimentoId, List<Entrega> entregas) {
+        return entregas.stream()
+                .map(Entrega::getFinalizadaEm)
+                .filter(Objects::nonNull)
+                .map(LocalDateTime::toLocalDate)
+                .distinct()
+                .filter(dia -> caixaRepository.findByEstabelecimentoIdAndDataReferencia(estabelecimentoId, dia)
+                        .filter(caixa -> !caixa.estaAberto())
+                        .isPresent())
+                .findFirst();
     }
 
     private Recibo buscar(UUID estabelecimentoId, UUID reciboId) {

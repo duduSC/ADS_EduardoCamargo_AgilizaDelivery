@@ -2,7 +2,7 @@
   "info": {
     "_postman_id": "989d0542-d6e0-59e1-9c2c-f2928dc144ec",
     "name": "Agiliza Delivery — API (dev)",
-    "description": "Coleção de desenvolvimento do backend Agiliza Delivery (T010/T011, D009).\n\n1. Suba o backend no perfil h2 (`./mvnw spring-boot:run`): a carga de demonstração cria os usuários do environment.\n2. Importe também `agiliza-dev.postman_environment.json` e selecione-o.\n3. Rode a pasta \"Fluxo ponta a ponta\" no Collection Runner, ou faça os logins da pasta \"Autenticação\" e use as demais.\n\nSó credenciais de desenvolvimento: nenhum segredo real aqui.",
+    "description": "Coleção de desenvolvimento do backend Agiliza Delivery (T010/T011/T014, D009).\n\n**Não rode a coleção inteira de uma vez.**\n\n- **Fluxo ponta a ponta** roda sozinho, com o backend recém-subido no perfil h2: faz os próprios logins e guarda os próprios ids. No CLI: `postman collection run <coleção> -e <environment> -i \"Fluxo ponta a ponta\"`. Ele fecha o caixa do dia: para repetir, reinicie o backend.\n- **As outras pastas são avulsas**: um request por endpoint, para rodar um a um. Dependem de variáveis (tokens e ids) que outros requests guardam, e algumas escrevem estado irreversível (fecham o caixa, cancelam, bloqueiam). Rodadas inteiras, em sequência, falham e estragam o estado do fluxo.\n\nComo usar: suba o backend no perfil h2 (`./mvnw spring-boot:run`), importe também `agiliza-dev.postman_environment.json` e selecione-o. Para outra porta, troque `baseUrl` (`--env-var baseUrl=http://localhost:8081`).\n\nTodo erro responde no mesmo formato, sem stacktrace:\n\n```json\n{\"timestamp\":\"2026-11-22T12:00:00Z\",\"status\":404,\"error\":\"Not Found\",\"codigo\":\"RECURSO_NAO_ENCONTRADO\",\"message\":\"O recurso solicitado não existe.\",\"path\":\"/api/nao-existe\"}\n```\n\n`campos` aparece só em erro de validação. Só credenciais de desenvolvimento: nenhum segredo real aqui.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "event": [
@@ -331,7 +331,7 @@
           ]
         }
       ],
-      "description": "Guarda token e refreshToken de cada perfil no environment. Rode antes das outras pastas."
+      "description": "**Pasta avulsa de preparação.** É a única avulsa que pode rodar inteira: não depende de variáveis e guarda token e refreshToken de cada perfil no environment. Rode antes de usar qualquer outra avulsa. O Fluxo ponta a ponta não precisa dela."
     },
     {
       "name": "Plataforma (ADMIN_GERAL)",
@@ -521,7 +521,8 @@
             }
           }
         }
-      ]
+      ],
+      "description": "**Pasta avulsa: rode um request por vez, nunca a pasta inteira em sequência.** Depende de variáveis guardadas por outros requests. Precisa do token de ADMIN_GERAL (Autenticação). \"Alterar status\" precisa do id guardado por \"Cadastrar restaurante\" e tira do ar a loja criada."
     },
     {
       "name": "Loja (ADMIN_RESTAURANTE)",
@@ -1120,7 +1121,8 @@
             }
           }
         }
-      ]
+      ],
+      "description": "**Pasta avulsa: rode um request por vez, nunca a pasta inteira em sequência.** Depende de variáveis guardadas por outros requests. Precisa do token de ADMIN_RESTAURANTE (Autenticação). Os requests de entregador, caixa e falha precisam de `novoMotoboyId`, `caixaId` e `falhaId`; reabrir só funciona com o caixa fechado."
     },
     {
       "name": "Operação (OPERADOR)",
@@ -2240,7 +2242,8 @@
             }
           ]
         }
-      ]
+      ],
+      "description": "**Pasta avulsa: rode um request por vez, nunca a pasta inteira em sequência.** Depende de variáveis guardadas por outros requests. Precisa do token de OPERADOR (Autenticação) e de `motoboyId`, `loteId`, `entregaId1`, `entregaId2`, `reciboId` e `caixaId`. Em sequência, os requests se anulam (cancelar, devolver) e \"Fechar caixa\" impede o Fluxo ponta a ponta até reiniciar o backend."
     },
     {
       "name": "Entregador (app)",
@@ -2697,7 +2700,8 @@
             }
           }
         }
-      ]
+      ],
+      "description": "**Pasta avulsa: rode um request por vez, nunca a pasta inteira em sequência.** Depende de variáveis guardadas por outros requests. Precisa do token do entregador no canal APP (Autenticação). Iniciar, status e contestar precisam de um lote despachado para ele (`loteId`, `entregaId1`, `entregaId2`)."
     },
     {
       "name": "Fluxo ponta a ponta",
@@ -3461,7 +3465,7 @@
           ]
         }
       ],
-      "description": "Roda inteira, na ordem (Collection Runner). Fecha o caixa do dia: para rodar de novo, reinicie o backend no perfil h2 (banco em memória)."
+      "description": "**Roda sozinha e inteira, na ordem** (Collection Runner ou `-i \"Fluxo ponta a ponta\"`), com o backend recém-subido: não depende das outras pastas, e nenhuma delas deve rodar antes. Fecha o caixa do dia: para rodar de novo, reinicie o backend no perfil h2 (banco em memória)."
     }
   ]
 }

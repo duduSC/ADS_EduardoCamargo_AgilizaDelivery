@@ -16,8 +16,6 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import java.math.BigDecimal;
-import java.time.LocalDate;
-import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
 
@@ -55,6 +53,7 @@ import br.com.agilizadelivery.repository.EntregaStatusHistoricoRepository;
 import br.com.agilizadelivery.repository.PedidoExternoRepository;
 import br.com.agilizadelivery.seguranca.jwt.ServicoJwt;
 import br.com.agilizadelivery.service.CanalAcesso;
+import br.com.agilizadelivery.tempo.HorarioLocal;
 import br.com.agilizadelivery.websocket.PublicadorTempoReal;
 
 /**
@@ -137,7 +136,7 @@ class EntregadorControllerTest {
                 {"status": "%s", "motivoFalha": %s,
                  "coordenada": {"latitude": -23.5614000, "longitude": -46.6559000},
                  "ocorridoEm": "%s"}
-                """.formatted(status, motivoJson, LocalDateTime.now().withNano(0));
+                """.formatted(status, motivoJson, HorarioLocal.agora().withNano(0));
     }
 
     /** Despacha, inicia e marca a entrega ENTREGUE pelo entregador principal. */
@@ -611,7 +610,7 @@ class EntregadorControllerTest {
         @Test
         @DisplayName("Caixa fechado: 422 CAIXA_FECHADO (UC08 E2)")
         void deveRecusarCaixaFechado() throws Exception {
-            cenario.caixa(loja, LocalDate.now(), StatusCaixa.FECHADO);
+            cenario.caixa(loja, HorarioLocal.hoje(), StatusCaixa.FECHADO);
             Entrega entrega = entregaConcluida();
 
             mockMvc.perform(post("/api/entregador/entregas/" + entrega.getId() + "/contestar")
@@ -648,7 +647,7 @@ class EntregadorControllerTest {
                     .andExpect(jsonPath("$.extrato.motoboyId", is(motoboy.getId().toString())))
                     .andExpect(jsonPath("$.extrato.linhas", hasSize(1)))
                     .andExpect(jsonPath("$.extrato.linhas[0].entregaId", is(entrega.getId().toString())))
-                    .andExpect(jsonPath("$.dataReferenciaCaixa", is(LocalDate.now().toString())))
+                    .andExpect(jsonPath("$.dataReferenciaCaixa", is(HorarioLocal.hoje().toString())))
                     .andExpect(jsonPath("$.statusCaixa", is("ABERTO")))
                     .andExpect(jsonPath("$.contestacaoPermitida", is(true)));
         }
@@ -669,7 +668,7 @@ class EntregadorControllerTest {
         @Test
         @DisplayName("Caixa fechado: statusCaixa FECHADO e contestacao indisponivel")
         void deveIndicarCaixaFechado() throws Exception {
-            cenario.caixa(loja, LocalDate.now(), StatusCaixa.FECHADO);
+            cenario.caixa(loja, HorarioLocal.hoje(), StatusCaixa.FECHADO);
 
             mockMvc.perform(get("/api/entregador/acerto")
                             .header(HttpHeaders.AUTHORIZATION, bearerEntregador))
