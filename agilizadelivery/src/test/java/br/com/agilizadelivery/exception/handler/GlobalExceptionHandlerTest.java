@@ -38,6 +38,7 @@ class GlobalExceptionHandlerTest {
         assertEquals(HttpStatus.UNPROCESSABLE_ENTITY, resposta.getStatusCode());
         assertNotNull(resposta.getBody());
         assertEquals(422, resposta.getBody().getStatus());
+        assertEquals("Unprocessable Entity", resposta.getBody().getError());
         assertEquals(CodigoErro.CAIXA_FECHADO, resposta.getBody().getCodigo());
         assertEquals("/api/caixas/123/fechar", resposta.getBody().getPath());
         assertNotNull(resposta.getBody().getTimestamp());

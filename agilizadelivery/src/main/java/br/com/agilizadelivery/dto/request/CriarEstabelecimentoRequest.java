@@ -21,4 +21,11 @@ public record CriarEstabelecimentoRequest(
         @NotNull @Positive Short maxPedidosPorLote,
         @PositiveOrZero BigDecimal valorRepasseForaDeArea,
         @NotNull @Valid AdministradorInicialRequest administrador) {
+
+    /** Telefone e senha nunca aparecem em log (Constituicao 6.2). */
+    @Override
+    public String toString() {
+        return "CriarEstabelecimentoRequest[nomeFantasia=" + nomeFantasia + ", cnpj=" + cnpj
+                + ", telefone=***, administrador=" + administrador + "]";
+    }
 }

@@ -1,10 +1,8 @@
 package br.com.agilizadelivery.seguranca;
 
 import java.io.IOException;
-import java.time.Instant;
 
 import org.springframework.http.HttpStatus;
-import org.springframework.http.MediaType;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.web.AuthenticationEntryPoint;
@@ -12,8 +10,8 @@ import org.springframework.security.web.access.AccessDeniedHandler;
 import org.springframework.stereotype.Component;
 
 import br.com.agilizadelivery.exception.TokenInvalidoException;
-import br.com.agilizadelivery.exception.handler.ApiErrorResponse;
 import br.com.agilizadelivery.exception.handler.CodigoErro;
+import br.com.agilizadelivery.exception.handler.RespostaDeErro;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import tools.jackson.databind.ObjectMapper;
@@ -45,19 +43,15 @@ public class RespostaErroSeguranca implements AuthenticationEntryPoint, AccessDe
                 "Você não tem permissão para acessar este recurso.");
     }
 
+    /** Origem fora da lista do CORS (Constituicao 6.5). */
+    void origemRecusada(HttpServletRequest request, HttpServletResponse response) throws IOException {
+        escrever(request, response, HttpStatus.FORBIDDEN, CodigoErro.ACESSO_NEGADO,
+                "Esta origem não tem permissão para acessar a API.");
+    }
+
     private void escrever(HttpServletRequest request, HttpServletResponse response, HttpStatus status,
             CodigoErro codigo, String mensagem) throws IOException {
-        ApiErrorResponse corpo = ApiErrorResponse.builder()
-                .timestamp(Instant.now())
-                .status(status.value())
-                .error(status.getReasonPhrase())
-                .codigo(codigo)
-                .message(mensagem)
-                .path(request.getRequestURI())
-                .build();
-        response.setStatus(status.value());
-        response.setContentType(MediaType.APPLICATION_JSON_VALUE);
-        response.setCharacterEncoding("UTF-8");
-        objectMapper.writeValue(response.getOutputStream(), corpo);
+        RespostaDeErro.escrever(objectMapper, response,
+                RespostaDeErro.corpo(status, codigo, mensagem, request.getRequestURI()));
     }
 }

@@ -12,4 +12,11 @@ public record CriarMotoboyRequest(
         @NotBlank @CPF String cpf,
         @NotBlank @Size(max = 15) String telefone,
         @Size(max = 8) String placaVeiculo) {
+
+    /** O Spring imprime o request em DEBUG: senha, CPF e telefone nunca aparecem (Constituicao 6.2 e 6.3). */
+    @Override
+    public String toString() {
+        return "CriarMotoboyRequest[nome=" + nome + ", loginEmail=" + loginEmail
+                + ", senha=***, cpf=***, telefone=***, placaVeiculo=" + placaVeiculo + "]";
+    }
 }

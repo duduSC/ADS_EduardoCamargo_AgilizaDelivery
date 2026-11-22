@@ -19,9 +19,11 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
+import org.springframework.web.filter.CorsFilter;
 
 import br.com.agilizadelivery.seguranca.CorsProperties;
 import br.com.agilizadelivery.seguranca.CpfProperties;
+import br.com.agilizadelivery.seguranca.ProcessadorCorsPadronizado;
 import br.com.agilizadelivery.seguranca.RespostaErroSeguranca;
 import br.com.agilizadelivery.seguranca.jwt.FiltroAutenticacaoJwt;
 import br.com.agilizadelivery.seguranca.jwt.JwtProperties;
@@ -30,9 +32,11 @@ import br.com.agilizadelivery.seguranca.jwt.ServicoJwt;
 /**
  * API stateless autenticada por JWT (DVP 1.5.1).
  *
- * Publicos: login, refresh e o health do actuator. Todo o resto exige
- * token de acesso valido; a autorizacao por perfil fica nos controllers
- * (@PreAuthorize com as expressoes de Perfis).
+ * Publicos: login, refresh e o health do actuator (o app o usa no "Testar
+ * conexao", D012). O resto do actuator e negado a todos, mesmo que seja
+ * exposto por engano. Todo o resto exige token de acesso valido; a
+ * autorizacao por perfil e canal fica nos controllers (@PreAuthorize com as
+ * expressoes de Perfis).
  */
 @Configuration
 @EnableMethodSecurity
@@ -51,9 +55,13 @@ public class SegurancaConfig {
             ServicoJwt servicoJwt,
             RespostaErroSeguranca respostaErro,
             CorsConfigurationSource corsConfigurationSource) throws Exception {
+        CorsFilter filtroCors = new CorsFilter(corsConfigurationSource);
+        filtroCors.setCorsProcessor(new ProcessadorCorsPadronizado(respostaErro));
         http
                 .csrf(AbstractHttpConfigurer::disable)
-                .cors(cors -> cors.configurationSource(corsConfigurationSource))
+                // o configurer do Spring nao deixa trocar o corpo da recusa
+                .cors(AbstractHttpConfigurer::disable)
+                .addFilter(filtroCors)
                 .httpBasic(AbstractHttpConfigurer::disable)
                 .formLogin(AbstractHttpConfigurer::disable)
                 .logout(AbstractHttpConfigurer::disable)
@@ -61,6 +69,7 @@ public class SegurancaConfig {
                 .authorizeHttpRequests(rotas -> rotas
                         .requestMatchers(HttpMethod.POST, "/api/auth/login", "/api/auth/refresh").permitAll()
                         .requestMatchers(HttpMethod.GET, "/actuator/health").permitAll()
+                        .requestMatchers("/actuator", "/actuator/**").denyAll()
                         .requestMatchers("/error").permitAll()
                         .requestMatchers("/ws", "/ws/**").permitAll()
                         .anyRequest().authenticated())
