@@ -2,7 +2,6 @@ package br.com.agilizadelivery.controller;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 import java.util.UUID;
 import java.util.concurrent.ThreadLocalRandom;
 
@@ -32,6 +31,7 @@ import br.com.agilizadelivery.repository.ReciboRepository;
 import br.com.agilizadelivery.repository.UsuarioRepository;
 import br.com.agilizadelivery.seguranca.jwt.ServicoJwt;
 import br.com.agilizadelivery.service.CanalAcesso;
+import br.com.agilizadelivery.tempo.HorarioLocal;
 
 /**
  * Monta dados persistidos (H2) e tokens para os testes de controller.
@@ -164,7 +164,7 @@ public class CenarioWeb {
 
     /** Caixa ABERTO para hoje (ou data especifica). */
     public Caixa caixa(Estabelecimento estabelecimento) {
-        return caixa(estabelecimento, LocalDate.now(), StatusCaixa.ABERTO);
+        return caixa(estabelecimento, HorarioLocal.hoje(), StatusCaixa.ABERTO);
     }
 
     public Caixa caixa(Estabelecimento estabelecimento, LocalDate data, StatusCaixa status) {
@@ -174,7 +174,7 @@ public class CenarioWeb {
         caixa.setAbertoEm(data.atStartOfDay());
         caixa.setStatus(status);
         if (status == StatusCaixa.FECHADO) {
-            caixa.setFechadoEm(LocalDateTime.now());
+            caixa.setFechadoEm(HorarioLocal.agora());
         }
         return caixaRepository.save(caixa);
     }

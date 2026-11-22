@@ -1,6 +1,5 @@
 package br.com.agilizadelivery.service.support;
 
-import java.time.LocalDateTime;
 import java.util.Optional;
 
 import org.springframework.stereotype.Component;
@@ -18,6 +17,7 @@ import br.com.agilizadelivery.entity.model.enums.StatusEntrega;
 import br.com.agilizadelivery.integracao.pedidos.PedidoRecebido;
 import br.com.agilizadelivery.repository.EntregaRepository;
 import br.com.agilizadelivery.repository.PedidoExternoRepository;
+import br.com.agilizadelivery.tempo.HorarioLocal;
 import br.com.agilizadelivery.websocket.PublicadorTempoReal;
 
 /**
@@ -67,7 +67,7 @@ public class ImportacaoPedido {
         PedidoExterno pedido = pedidoExterno(provedor, loja, recebido);
         Entrega entrega = entrega(loja, pedido, recebido);
         localizacao.localizar(entrega);
-        pedido.setProcessadoEm(LocalDateTime.now());
+        pedido.setProcessadoEm(HorarioLocal.agora());
         pedidoRepository.save(pedido);
 
         Entrega salva = entregaRepository.save(entrega);

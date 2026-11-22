@@ -1,6 +1,5 @@
 package br.com.agilizadelivery.service.impl;
 
-import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
 
@@ -18,6 +17,7 @@ import br.com.agilizadelivery.repository.PedidoExternoRepository;
 import br.com.agilizadelivery.service.PedidoExternoService;
 import br.com.agilizadelivery.service.support.BuscadorTenant;
 import br.com.agilizadelivery.service.support.Provedores;
+import br.com.agilizadelivery.tempo.HorarioLocal;
 
 /**
  * Persistencia dos pedidos recebidos do provedor (HU03, RNF13).
@@ -73,7 +73,7 @@ public class PedidoExternoServiceImpl implements PedidoExternoService {
         if (pedido.getProcessadoEm() != null) {
             throw new RegraDeNegocioException("O pedido já foi processado e convertido em entrega.");
         }
-        pedido.setProcessadoEm(LocalDateTime.now());
+        pedido.setProcessadoEm(HorarioLocal.agora());
         return DtoMapper.toResponse(repository.save(pedido));
     }
 

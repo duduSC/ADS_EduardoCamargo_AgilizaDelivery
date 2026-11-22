@@ -39,6 +39,7 @@ import br.com.agilizadelivery.service.EntregadorService;
 import br.com.agilizadelivery.service.ExtratoAcertoService;
 import br.com.agilizadelivery.service.LoteEntregaService;
 import br.com.agilizadelivery.service.MotoboyService;
+import br.com.agilizadelivery.tempo.HorarioLocal;
 
 /**
  * Fachada do aplicativo do entregador (D008). Resolve o entregador a partir
@@ -178,7 +179,7 @@ public class EntregadorServiceImpl implements EntregadorService {
         LocalDateTime de = inicio;
         LocalDateTime ate = fim;
         if (de == null) {
-            LocalDate hoje = LocalDate.now();
+            LocalDate hoje = HorarioLocal.hoje();
             de = hoje.atStartOfDay();
             ate = hoje.atTime(LocalTime.MAX);
         }

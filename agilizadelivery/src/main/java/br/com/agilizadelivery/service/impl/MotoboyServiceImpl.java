@@ -1,7 +1,6 @@
 package br.com.agilizadelivery.service.impl;
 
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
 
@@ -30,6 +29,7 @@ import br.com.agilizadelivery.service.seguranca.ProtetorCpf;
 import br.com.agilizadelivery.service.support.BuscadorTenant;
 import br.com.agilizadelivery.service.support.CadastroUsuario;
 import br.com.agilizadelivery.service.support.Coordenadas;
+import br.com.agilizadelivery.tempo.HorarioLocal;
 import br.com.agilizadelivery.websocket.PublicadorTempoReal;
 
 /**
@@ -181,7 +181,7 @@ public class MotoboyServiceImpl implements MotoboyService {
                     "A posição só é registrada enquanto o entregador estiver ONLINE ou EM_ROTA.");
         }
         motoboy.setUltimaPosicao(Coordenadas.validada(latitude, longitude));
-        motoboy.setUltimaPosicaoEm(LocalDateTime.now());
+        motoboy.setUltimaPosicaoEm(HorarioLocal.agora());
         MotoboyResponse resposta = DtoMapper.toResponse(repository.save(motoboy));
         publicador.publicarFrota(estabelecimentoId, "POSICAO_ATUALIZADA", resposta);
         return resposta;

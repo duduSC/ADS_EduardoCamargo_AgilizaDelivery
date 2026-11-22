@@ -11,6 +11,7 @@ import br.com.agilizadelivery.entity.model.embeddable.Coordenada;
 import br.com.agilizadelivery.entity.model.enums.StatusEntrega;
 import br.com.agilizadelivery.exception.TransicaoEstadoInvalidaException;
 import br.com.agilizadelivery.repository.EntregaStatusHistoricoRepository;
+import br.com.agilizadelivery.tempo.HorarioLocal;
 
 /**
  * Unico ponto que altera o status de uma entrega.
@@ -29,7 +30,7 @@ public class TransicaoEntrega {
 
     /** Registra o nascimento da entrega, sem status anterior. */
     public void registrarCriacao(Entrega entrega, Usuario autor) {
-        registrar(entrega, null, autor, null, LocalDateTime.now());
+        registrar(entrega, null, autor, null, HorarioLocal.agora());
     }
 
     public void transitar(
@@ -43,7 +44,7 @@ public class TransicaoEntrega {
             throw new TransicaoEstadoInvalidaException("Entrega", atual, destino);
         }
         entrega.setStatus(destino);
-        registrar(entrega, atual, autor, coordenada, ocorridoEm == null ? LocalDateTime.now() : ocorridoEm);
+        registrar(entrega, atual, autor, coordenada, ocorridoEm == null ? HorarioLocal.agora() : ocorridoEm);
     }
 
     private void registrar(

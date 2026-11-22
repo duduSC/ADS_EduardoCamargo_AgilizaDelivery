@@ -10,6 +10,7 @@ import br.com.agilizadelivery.entity.model.Entrega;
 import br.com.agilizadelivery.exception.AjusteValorNaoPermitidoException;
 import br.com.agilizadelivery.exception.CaixaFechadoException;
 import br.com.agilizadelivery.repository.CaixaRepository;
+import br.com.agilizadelivery.tempo.HorarioLocal;
 
 /**
  * Decide se os valores de uma entrega ainda aceitam correcao (DVP 2.9).
@@ -61,7 +62,7 @@ public class PoliticaCorrecao {
 
     private Optional<Caixa> caixaDoDia(Entrega entrega) {
         LocalDate data = entrega.getFinalizadaEm() == null
-                ? LocalDate.now()
+                ? HorarioLocal.hoje()
                 : entrega.getFinalizadaEm().toLocalDate();
         return caixaRepository.findByEstabelecimentoIdAndDataReferencia(entrega.getEstabelecimento().getId(), data);
     }

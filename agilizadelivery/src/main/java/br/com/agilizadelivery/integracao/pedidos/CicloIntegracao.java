@@ -1,7 +1,6 @@
 package br.com.agilizadelivery.integracao.pedidos;
 
 import java.time.Duration;
-import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
@@ -18,6 +17,7 @@ import br.com.agilizadelivery.entity.model.enums.StatusFalhaIntegracao;
 import br.com.agilizadelivery.repository.ConfiguracaoIntegracaoRepository;
 import br.com.agilizadelivery.repository.FalhaIntegracaoRepository;
 import br.com.agilizadelivery.service.support.ImportacaoPedido;
+import br.com.agilizadelivery.tempo.HorarioLocal;
 import lombok.extern.slf4j.Slf4j;
 
 /**
@@ -83,7 +83,7 @@ public class CicloIntegracao {
             registrarFalha(configuracao, null, EtapaFalhaIntegracao.CONSULTA, e, null);
             return;
         }
-        configuracaoRepository.registrarPolling(configuracao.getId(), LocalDateTime.now());
+        configuracaoRepository.registrarPolling(configuracao.getId(), HorarioLocal.agora());
 
         for (PedidoRecebido pedido : pedidos) {
             boolean importado;
@@ -151,7 +151,7 @@ public class CicloIntegracao {
         falha.setTentativas((short) erro.tentativas);
         falha.setPayloadJson(payloadJson);
         falha.setStatus(StatusFalhaIntegracao.PENDENTE);
-        falha.setOcorridoEm(LocalDateTime.now());
+        falha.setOcorridoEm(HorarioLocal.agora());
         falhaRepository.save(falha);
     }
 

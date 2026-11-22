@@ -1,7 +1,6 @@
 package br.com.agilizadelivery.service.impl;
 
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
 
@@ -30,6 +29,7 @@ import br.com.agilizadelivery.repository.ReciboRepository;
 import br.com.agilizadelivery.service.ReciboService;
 import br.com.agilizadelivery.service.support.BuscadorTenant;
 import br.com.agilizadelivery.service.support.EncerramentoLote;
+import br.com.agilizadelivery.tempo.HorarioLocal;
 import lombok.extern.slf4j.Slf4j;
 
 /**
@@ -144,7 +144,7 @@ public class ReciboServiceImpl implements ReciboService {
             throw new CaixaFechadoException("marcar o recibo como pago");
         }
         recibo.setStatus(StatusRecibo.PAGO);
-        recibo.setPagoEm(LocalDateTime.now());
+        recibo.setPagoEm(HorarioLocal.agora());
         return DtoMapper.toResponse(repository.save(recibo));
     }
 

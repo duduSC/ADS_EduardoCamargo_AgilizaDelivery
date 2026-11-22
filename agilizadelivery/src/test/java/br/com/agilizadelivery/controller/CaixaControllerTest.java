@@ -27,6 +27,7 @@ import br.com.agilizadelivery.entity.model.Estabelecimento;
 import br.com.agilizadelivery.entity.model.Usuario;
 import br.com.agilizadelivery.entity.model.enums.PerfilUsuario;
 import br.com.agilizadelivery.entity.model.enums.StatusCaixa;
+import br.com.agilizadelivery.tempo.HorarioLocal;
 
 /**
  * Testes de integracao do CaixaController (T007).
@@ -109,7 +110,7 @@ class CaixaControllerTest {
         @Test
         @DisplayName("Deve retornar caixa do dia")
         void deveRetornarCaixaDoDia() throws Exception {
-            cenario.caixa(loja, LocalDate.now(), StatusCaixa.ABERTO);
+            cenario.caixa(loja, HorarioLocal.hoje(), StatusCaixa.ABERTO);
 
             mockMvc.perform(get("/api/caixas/atual")
                             .header(HttpHeaders.AUTHORIZATION, bearer))
@@ -161,7 +162,7 @@ class CaixaControllerTest {
         @Test
         @DisplayName("Caixa ja fechado: 422 CAIXA_FECHADO")
         void deveRecusarFecharCaixaJaFechado() throws Exception {
-            Caixa caixa = cenario.caixa(loja, LocalDate.now(), StatusCaixa.FECHADO);
+            Caixa caixa = cenario.caixa(loja, HorarioLocal.hoje(), StatusCaixa.FECHADO);
 
             mockMvc.perform(post("/api/caixas/" + caixa.getId() + "/fechar")
                             .header(HttpHeaders.AUTHORIZATION, bearer))
@@ -178,7 +179,7 @@ class CaixaControllerTest {
         @DisplayName("ADMIN_RESTAURANTE: deve reabrir caixa fechado")
         void deveReabrirComoAdmin() throws Exception {
             Usuario admin = cenario.usuario(loja, PerfilUsuario.ADMIN_RESTAURANTE);
-            Caixa caixa = cenario.caixa(loja, LocalDate.now(), StatusCaixa.FECHADO);
+            Caixa caixa = cenario.caixa(loja, HorarioLocal.hoje(), StatusCaixa.FECHADO);
 
             mockMvc.perform(post("/api/caixas/" + caixa.getId() + "/reabrir")
                             .header(HttpHeaders.AUTHORIZATION, cenario.bearer(admin))
@@ -193,7 +194,7 @@ class CaixaControllerTest {
         @Test
         @DisplayName("OPERADOR: 403 ACESSO_NEGADO (D004)")
         void deveNegar403ParaOperador() throws Exception {
-            Caixa caixa = cenario.caixa(loja, LocalDate.now(), StatusCaixa.FECHADO);
+            Caixa caixa = cenario.caixa(loja, HorarioLocal.hoje(), StatusCaixa.FECHADO);
 
             mockMvc.perform(post("/api/caixas/" + caixa.getId() + "/reabrir")
                             .header(HttpHeaders.AUTHORIZATION, bearer)
@@ -208,7 +209,7 @@ class CaixaControllerTest {
         @DisplayName("Sem motivo: 400 DADOS_INVALIDOS")
         void deveExigirMotivo() throws Exception {
             Usuario admin = cenario.usuario(loja, PerfilUsuario.ADMIN_RESTAURANTE);
-            Caixa caixa = cenario.caixa(loja, LocalDate.now(), StatusCaixa.FECHADO);
+            Caixa caixa = cenario.caixa(loja, HorarioLocal.hoje(), StatusCaixa.FECHADO);
 
             mockMvc.perform(post("/api/caixas/" + caixa.getId() + "/reabrir")
                             .header(HttpHeaders.AUTHORIZATION, cenario.bearer(admin))

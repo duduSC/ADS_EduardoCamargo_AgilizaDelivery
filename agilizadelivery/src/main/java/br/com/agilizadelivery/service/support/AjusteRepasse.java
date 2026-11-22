@@ -1,7 +1,6 @@
 package br.com.agilizadelivery.service.support;
 
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
 
 import org.springframework.stereotype.Component;
 
@@ -11,6 +10,7 @@ import br.com.agilizadelivery.entity.model.Usuario;
 import br.com.agilizadelivery.exception.AjusteValorNaoPermitidoException;
 import br.com.agilizadelivery.repository.EntregaAjusteValorRepository;
 import br.com.agilizadelivery.repository.EntregaRepository;
+import br.com.agilizadelivery.tempo.HorarioLocal;
 
 /**
  * Ajuste manual do repasse de uma entrega (UC03 A1, DVP 1.5.5 passo 6).
@@ -58,7 +58,7 @@ public class AjusteRepasse {
         ajuste.setValorAnterior(valorAnterior);
         ajuste.setValorNovo(valorNovo);
         ajuste.setMotivo(motivo.trim());
-        ajuste.setAjustadoEm(LocalDateTime.now());
+        ajuste.setAjustadoEm(HorarioLocal.agora());
 
         entrega.setValorRepasse(valorNovo);
         entregaRepository.save(entrega);

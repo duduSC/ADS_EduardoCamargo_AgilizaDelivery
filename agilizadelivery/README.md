@@ -38,6 +38,14 @@ Senha de todos: `agiliza123` (troque com `AGILIZA_DEMO_SENHA`). No banco ela fic
 
 O que é criado: a loja "Pizzaria Demo" (ATIVO, centro de Passo Fundo/RS, até 5 pedidos por lote, repasse fora de área R$ 20,00); dois entregadores ATIVOS e OFFLINE (CPFs fictícios, gravados cifrados); faixas 0–3 km = R$ 9,00, 3–5 km = R$ 12,00 e 5–8 km = R$ 15,00; o caixa do dia ABERTO; três entregas avulsas AGUARDANDO_DESPACHO (PIX, DINHEIRO e CREDITO).
 
+## Fuso horário (PROVISÓRIO, T014)
+
+O DVP não define fuso. As datas da API são locais, sem fuso (`2026-11-22T21:30:00`), sempre no horário de `America/Sao_Paulo`, qualquer que seja o fuso da máquina ou do container. Não é preciso passar `TZ` nem `-Duser.timezone` para subir.
+
+- No código, "agora" e "hoje" vêm só de `tempo/HorarioLocal`; um teste barra `LocalDate.now()` e `LocalDateTime.now()` sem fuso.
+- Os testes rodam com a JVM em UTC (`pom.xml`), como no container.
+- Os horários do log e o `timestamp` dos erros continuam no fuso da JVM e em UTC (`Z`), respectivamente.
+
 ## Distância sem chave do Google (PROVISÓRIO, D009)
 
 Sem `GOOGLE_MAPS_API_KEY`, a distância loja → cliente é a linha reta (Haversine) × 1,3, com 2 casas. O log avisa ao subir: `GOOGLE_MAPS_API_KEY ausente: distância em linha reta (PROVISÓRIO, D009)`. Uma entrega sem coordenada continua indo para revisão (SEM_COORDENADA). Com a chave definida, vale a Routes API e, em falha, SEM_DISTANCIA (DVP 1.5.5).

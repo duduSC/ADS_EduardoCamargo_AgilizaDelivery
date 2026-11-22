@@ -33,6 +33,7 @@ import br.com.agilizadelivery.service.support.EncerramentoLote;
 import br.com.agilizadelivery.service.support.LocalizacaoEntrega;
 import br.com.agilizadelivery.service.support.PoliticaCorrecao;
 import br.com.agilizadelivery.service.support.TransicaoEntrega;
+import br.com.agilizadelivery.tempo.HorarioLocal;
 import br.com.agilizadelivery.websocket.PublicadorTempoReal;
 
 /**
@@ -158,7 +159,7 @@ public class EntregaServiceImpl implements EntregaService {
             throw new TransicaoEstadoInvalidaException(
                     "Somente entregas aguardando despacho podem ser marcadas como prontas.");
         }
-        entrega.setProntoParaDespachoEm(prontaEm == null ? LocalDateTime.now() : prontaEm);
+        entrega.setProntoParaDespachoEm(prontaEm == null ? HorarioLocal.agora() : prontaEm);
         return DtoMapper.toResponse(repository.save(entrega));
     }
 
@@ -187,7 +188,7 @@ public class EntregaServiceImpl implements EntregaService {
         Usuario autor = buscador.usuario(estabelecimentoId, usuarioId);
         exigirEntregadorDoLote(entrega, autor);
 
-        LocalDateTime ocorridoEm = request.ocorridoEm() == null ? LocalDateTime.now() : request.ocorridoEm();
+        LocalDateTime ocorridoEm = request.ocorridoEm() == null ? HorarioLocal.agora() : request.ocorridoEm();
         transicao.transitar(entrega, destino, autor, coordenadaInformada(request.coordenada()), ocorridoEm);
         entrega.setMotivoFalha(destino == StatusEntrega.FALHA ? request.motivoFalha().trim() : null);
         entrega.setFinalizadaEm(ocorridoEm);
@@ -215,7 +216,7 @@ public class EntregaServiceImpl implements EntregaService {
                 estabelecimentoId, usuarioId, PerfilUsuario.OPERADOR, PerfilUsuario.ADMIN_RESTAURANTE);
 
         boolean saiuDaLoja = entrega.getStatus() == StatusEntrega.EM_ROTA;
-        transicao.transitar(entrega, StatusEntrega.CANCELADA, autor, null, LocalDateTime.now());
+        transicao.transitar(entrega, StatusEntrega.CANCELADA, autor, null, HorarioLocal.agora());
         if (saiuDaLoja) {
             calculadoraRepasse.aplicarFaixaVigente(entrega);
         } else {
@@ -224,7 +225,7 @@ public class EntregaServiceImpl implements EntregaService {
             entrega.setMotivoRevisao(null);
         }
         entrega.setMotivoFalha(limitar(motivo.trim()));
-        entrega.setFinalizadaEm(LocalDateTime.now());
+        entrega.setFinalizadaEm(HorarioLocal.agora());
 
         Entrega salva = repository.save(entrega);
         encerramentoLote.avaliar(salva.getLote());

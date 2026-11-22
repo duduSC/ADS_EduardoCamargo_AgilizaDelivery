@@ -1,6 +1,5 @@
 package br.com.agilizadelivery.service.impl;
 
-import java.time.LocalDateTime;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -25,6 +24,7 @@ import br.com.agilizadelivery.repository.UsuarioRepository;
 import br.com.agilizadelivery.service.AutenticacaoService;
 import br.com.agilizadelivery.service.CanalAcesso;
 import br.com.agilizadelivery.service.support.CadastroUsuario;
+import br.com.agilizadelivery.tempo.HorarioLocal;
 
 /**
  * Autenticacao por e-mail e senha (UC07).
@@ -80,7 +80,7 @@ public class AutenticacaoServiceImpl implements AutenticacaoService {
         }
         UUID motoboyId = usuario.getPerfil() == PerfilUsuario.ENTREGADOR ? motoboyAtivo(usuario).getId() : null;
 
-        usuario.setUltimoAcessoEm(LocalDateTime.now());
+        usuario.setUltimoAcessoEm(HorarioLocal.agora());
         usuarioRepository.save(usuario);
         return new UsuarioAutenticadoResponse(
                 usuario.getId(),

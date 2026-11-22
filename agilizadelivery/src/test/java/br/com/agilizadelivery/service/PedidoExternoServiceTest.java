@@ -12,7 +12,6 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -38,6 +37,7 @@ import br.com.agilizadelivery.repository.PedidoExternoRepository;
 import br.com.agilizadelivery.service.impl.PedidoExternoServiceImpl;
 import br.com.agilizadelivery.service.support.BuscadorTenant;
 import br.com.agilizadelivery.service.support.Provedores;
+import br.com.agilizadelivery.tempo.HorarioLocal;
 
 @ExtendWith(MockitoExtension.class)
 class PedidoExternoServiceTest {
@@ -103,7 +103,7 @@ class PedidoExternoServiceTest {
 
         assertNotNull(service.marcarProcessado(estabelecimento.getId(), pedido.getId()).processadoEm());
 
-        pedido.setProcessadoEm(LocalDateTime.now());
+        pedido.setProcessadoEm(HorarioLocal.agora());
         assertThrows(RegraDeNegocioException.class, () ->
                 service.marcarProcessado(estabelecimento.getId(), pedido.getId()));
     }

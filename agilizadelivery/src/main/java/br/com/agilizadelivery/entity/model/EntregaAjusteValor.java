@@ -3,6 +3,8 @@ package br.com.agilizadelivery.entity.model;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
+import br.com.agilizadelivery.tempo.HorarioLocal;
+
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
@@ -79,7 +81,7 @@ public class EntregaAjusteValor {
     @PrePersist
     protected void aoCriar() {
         if (this.ajustadoEm == null) {
-            this.ajustadoEm = LocalDateTime.now();
+            this.ajustadoEm = HorarioLocal.agora();
         }
     }
 }

@@ -22,6 +22,7 @@ import br.com.agilizadelivery.dto.response.CaixaResponse;
 import br.com.agilizadelivery.seguranca.Perfis;
 import br.com.agilizadelivery.seguranca.jwt.UsuarioLogado;
 import br.com.agilizadelivery.service.CaixaService;
+import br.com.agilizadelivery.tempo.HorarioLocal;
 import jakarta.validation.Valid;
 
 /**
@@ -47,7 +48,7 @@ public class CaixaController {
     @PreAuthorize(Perfis.OPERACAO)
     public CaixaResponse atual(@AuthenticationPrincipal UsuarioLogado logado) {
         return caixaService.buscarPorEstabelecimentoEData(
-                logado.estabelecimentoObrigatorio(), LocalDate.now());
+                logado.estabelecimentoObrigatorio(), HorarioLocal.hoje());
     }
 
     /** Historico de caixas por periodo. */
@@ -62,7 +63,7 @@ public class CaixaController {
             return caixaService.listarPorPeriodo(estabelecimentoId, dataInicio, dataFim);
         }
         // Sem filtro: lista caixas dos ultimos 30 dias
-        LocalDate hoje = LocalDate.now();
+        LocalDate hoje = HorarioLocal.hoje();
         return caixaService.listarPorPeriodo(estabelecimentoId, hoje.minusDays(30), hoje);
     }
 

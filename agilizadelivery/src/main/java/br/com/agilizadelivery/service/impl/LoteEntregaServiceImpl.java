@@ -39,6 +39,7 @@ import br.com.agilizadelivery.service.LoteEntregaService;
 import br.com.agilizadelivery.service.support.BuscadorTenant;
 import br.com.agilizadelivery.service.support.EncerramentoLote;
 import br.com.agilizadelivery.service.support.TransicaoEntrega;
+import br.com.agilizadelivery.tempo.HorarioLocal;
 import br.com.agilizadelivery.websocket.PublicadorTempoReal;
 
 /**
@@ -96,7 +97,7 @@ public class LoteEntregaServiceImpl implements LoteEntregaService {
         List<Entrega> entregas = carregarNaOrdem(estabelecimentoId, ordem);
         entregas.forEach(LoteEntregaServiceImpl::exigirApta);
 
-        LocalDateTime agora = LocalDateTime.now();
+        LocalDateTime agora = HorarioLocal.agora();
         LoteEntrega lote = new LoteEntrega();
         lote.setEstabelecimento(estabelecimento);
         lote.setMotoboy(motoboy);
@@ -156,7 +157,7 @@ public class LoteEntregaServiceImpl implements LoteEntregaService {
             throw new TransicaoEstadoInvalidaException("Lote", lote.getStatus(), StatusLote.EM_ROTA);
         }
 
-        LocalDateTime agora = LocalDateTime.now();
+        LocalDateTime agora = HorarioLocal.agora();
         List<Entrega> entregas = entregaRepository.findByLoteIdOrderByOrdemRotaAsc(lote.getId()).stream()
                 .filter(entrega -> entrega.getStatus() == StatusEntrega.DESPACHADA)
                 .toList();
@@ -183,7 +184,7 @@ public class LoteEntregaServiceImpl implements LoteEntregaService {
             throw new TransicaoEstadoInvalidaException("Lote", lote.getStatus(), StatusLote.CANCELADO);
         }
 
-        LocalDateTime agora = LocalDateTime.now();
+        LocalDateTime agora = HorarioLocal.agora();
         List<Entrega> devolvidas = entregaRepository.findByLoteIdOrderByOrdemRotaAsc(lote.getId()).stream()
                 .filter(entrega -> entrega.getStatus() == StatusEntrega.DESPACHADA)
                 .toList();
