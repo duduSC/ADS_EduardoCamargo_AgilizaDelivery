@@ -4,6 +4,7 @@ import java.math.BigDecimal;
 
 import br.com.agilizadelivery.dto.CoordenadaDto;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.Digits;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
@@ -19,7 +20,7 @@ public record CriarEstabelecimentoRequest(
         @NotBlank @Size(max = 255) String enderecoCompleto,
         @NotNull @Valid CoordenadaDto coordenada,
         @NotNull @Positive Short maxPedidosPorLote,
-        @PositiveOrZero BigDecimal valorRepasseForaDeArea,
+        @PositiveOrZero @Digits(integer = 8, fraction = 2) BigDecimal valorRepasseForaDeArea,
         @NotNull @Valid AdministradorInicialRequest administrador) {
 
     /** Telefone e senha nunca aparecem em log (Constituicao 6.2). */
