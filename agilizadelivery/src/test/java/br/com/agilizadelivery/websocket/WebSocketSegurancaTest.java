@@ -189,6 +189,32 @@ class WebSocketSegurancaTest {
     }
 
     @Test
+    @DisplayName("Destino duplicado: o broker usa o mesmo destino que foi conferido")
+    void destinoDuplicado() throws Exception {
+        ClienteCru cliente = conectado(operador(lojaA));
+
+        cliente.enviar("SUBSCRIBE\nid:0\ndestination:" + topico(lojaA, "entregas")
+                + "\ndestination:/topic/**\n\n\0");
+
+        for (int i = 0; i < 5; i++) {
+            mensageiro.convertAndSend(topico(lojaB, "entregas"), "evento-da-loja-b");
+            String quadro = cliente.proximo(200);
+            assertThat(quadro == null || !quadro.contains("evento-da-loja-b")).isTrue();
+        }
+    }
+
+    @Test
+    @DisplayName("Frames emendados na mesma mensagem são conferidos um a um")
+    void framesEmendados() throws Exception {
+        ClienteCru cliente = conectado(operador(lojaA));
+
+        cliente.enviar("SUBSCRIBE\nid:0\ndestination:" + topico(lojaA, "entregas") + "\n\n\0"
+                + "SUBSCRIBE\nid:1\ndestination:/topic/**\n\n\0");
+
+        assertThat(cliente.proximo()).startsWith("ERROR");
+    }
+
+    @Test
     @DisplayName("SUBSCRIBE sem CONNECT é recusado")
     void inscricaoSemConexao() throws Exception {
         ClienteCru cliente = abrir(null);

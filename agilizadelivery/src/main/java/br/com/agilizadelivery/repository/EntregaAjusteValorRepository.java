@@ -17,9 +17,6 @@ import br.com.agilizadelivery.entity.model.EntregaAjusteValor;
 @Repository
 public interface EntregaAjusteValorRepository extends JpaRepository<EntregaAjusteValor, Long> {
 
-    /** Ajustes de uma entrega, em ordem cronologica. */
-    List<EntregaAjusteValor> findByEntregaIdOrderByAjustadoEmAsc(UUID entregaId);
-
     List<EntregaAjusteValor> findByEntregaEstabelecimentoIdAndEntregaIdOrderByAjustadoEmAsc(
             UUID estabelecimentoId,
             UUID entregaId);

@@ -9,8 +9,10 @@ import org.springframework.web.socket.config.annotation.WebSocketMessageBrokerCo
 
 import br.com.agilizadelivery.seguranca.CorsProperties;
 import br.com.agilizadelivery.websocket.AutenticacaoStompInterceptor;
+import br.com.agilizadelivery.websocket.HandshakeValidoInterceptor;
 import br.com.agilizadelivery.websocket.SubscricaoTenantInterceptor;
 import br.com.agilizadelivery.websocket.TratadorErroStomp;
+import tools.jackson.databind.ObjectMapper;
 
 /**
  * WebSocket/STOMP em /ws, com autenticacao JWT no frame CONNECT e
@@ -29,14 +31,17 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
     private final AutenticacaoStompInterceptor autenticacaoInterceptor;
     private final SubscricaoTenantInterceptor subscricaoInterceptor;
     private final CorsProperties corsProperties;
+    private final ObjectMapper objectMapper;
 
     public WebSocketConfig(
             AutenticacaoStompInterceptor autenticacaoInterceptor,
             SubscricaoTenantInterceptor subscricaoInterceptor,
-            CorsProperties corsProperties) {
+            CorsProperties corsProperties,
+            ObjectMapper objectMapper) {
         this.autenticacaoInterceptor = autenticacaoInterceptor;
         this.subscricaoInterceptor = subscricaoInterceptor;
         this.corsProperties = corsProperties;
+        this.objectMapper = objectMapper;
     }
 
     @Override
@@ -48,6 +53,7 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
     @Override
     public void registerStompEndpoints(StompEndpointRegistry registry) {
         registry.addEndpoint("/ws")
+                .addInterceptors(new HandshakeValidoInterceptor(objectMapper))
                 .setAllowedOrigins(corsProperties.origensPermitidas().toArray(String[]::new));
         registry.setErrorHandler(new TratadorErroStomp());
     }

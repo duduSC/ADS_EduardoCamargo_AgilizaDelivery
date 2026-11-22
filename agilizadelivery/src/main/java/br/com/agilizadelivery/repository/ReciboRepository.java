@@ -20,12 +20,6 @@ import br.com.agilizadelivery.entity.model.enums.StatusRecibo;
 @Repository
 public interface ReciboRepository extends JpaRepository<Recibo, UUID> {
 
-    /** Recibos de um periodo de operacao, para consolidar o fechamento. */
-    List<Recibo> findByCaixaId(UUID caixaId);
-
-    /** Recibos de um entregador por situacao. */
-    List<Recibo> findByMotoboyIdAndStatus(UUID motoboyId, StatusRecibo status);
-
     /** Recibos de uma loja em um dia. */
     List<Recibo> findByEstabelecimentoIdAndDataReferencia(UUID estabelecimentoId, LocalDate dataReferencia);
 

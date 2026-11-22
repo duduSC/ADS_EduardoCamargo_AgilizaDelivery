@@ -198,6 +198,18 @@ class FusoHorarioTest {
     }
 
     @Test
+    @DisplayName("Data que chega com Z vale o instante, e não a hora UTC como se fosse local")
+    void entradaComZ() throws Exception {
+        congelarEm(LocalDateTime.parse(VINTE_E_UMA_E_TRINTA));
+        String entregaId = entregaEmRota();
+
+        entregador(post("/api/entregador/entregas/" + entregaId + "/status"),
+                "{\"status\":\"ENTREGUE\",\"ocorridoEm\":\"2026-11-23T00:30:00Z\"}")
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.finalizadaEm", is(VINTE_E_UMA_E_TRINTA)));
+    }
+
+    @Test
     @DisplayName("Todo horário gravado pelo servidor sai no horário de São Paulo, sem fuso")
     void horariosDoServidor() throws Exception {
         String agora = VINTE_E_UMA_E_TRINTA;

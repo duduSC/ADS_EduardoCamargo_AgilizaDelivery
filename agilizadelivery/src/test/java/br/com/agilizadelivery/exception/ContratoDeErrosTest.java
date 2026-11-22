@@ -235,6 +235,23 @@ class ContratoDeErrosTest {
                 .doesNotContainIgnoringCase("<html", "tomcat", "exception");
     }
 
+    @ParameterizedTest
+    @ValueSource(strings = { "Sec-WebSocket-Version: 8\r\nSec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==\r\n",
+            "Sec-WebSocket-Version: 13\r\n" })
+    @DisplayName("Handshake incompleto no /ws sai no formato padrão")
+    void handshakeIncompleto(String cabecalhos) throws Exception {
+        String resposta;
+        try (Socket socket = new Socket("localhost", porta)) {
+            socket.setSoTimeout(5_000);
+            socket.getOutputStream().write(("GET /ws HTTP/1.1\r\nHost: localhost\r\nUpgrade: websocket\r\n"
+                    + "Connection: Upgrade, close\r\n" + cabecalhos + "\r\n").getBytes(StandardCharsets.US_ASCII));
+            socket.getOutputStream().flush();
+            resposta = new String(socket.getInputStream().readAllBytes(), StandardCharsets.UTF_8);
+        }
+
+        assertThat(resposta).startsWith("HTTP/1.1 400").contains("\"codigo\":\"PARAMETRO_INVALIDO\"");
+    }
+
     @Test
     @DisplayName("Health é público e não mostra componentes")
     void healthSemDetalhes() throws Exception {

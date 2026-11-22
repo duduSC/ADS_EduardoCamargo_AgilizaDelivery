@@ -19,9 +19,6 @@ import br.com.agilizadelivery.entity.model.enums.StatusLote;
 @Repository
 public interface LoteEntregaRepository extends JpaRepository<LoteEntrega, UUID> {
 
-    /** Lotes de um entregador em determinada situacao; em aberto, no aplicativo. */
-    List<LoteEntrega> findByMotoboyIdAndStatus(UUID motoboyId, StatusLote status);
-
     /** Lotes de uma loja por situacao, para o painel de despacho. */
     List<LoteEntrega> findByEstabelecimentoIdAndStatus(UUID estabelecimentoId, StatusLote status);
 
