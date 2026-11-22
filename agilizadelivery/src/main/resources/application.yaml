@@ -10,7 +10,7 @@ spring:
     open-in-view: false
   datasource:
     hikari:
-      # sem conexao em 10 s a resposta e 503 (o padrao e esperar 30 s)
+      # PROVISORIO (T014): sem conexao em 10 s a resposta e 503 (o padrao e esperar 30 s)
       connection-timeout: 10000
   # Explicitos porque o devtools liga os quatro por padrao (Constituicao 6.1 a 6.4).
   mvc:
