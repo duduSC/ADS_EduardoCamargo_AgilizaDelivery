@@ -18,7 +18,6 @@ import br.com.agilizadelivery.entity.model.enums.StatusDisponibilidadeMotoboy;
 @Repository
 public interface MotoboyRepository extends JpaRepository<Motoboy, UUID> {
 
-    
     Boolean existsByCpfHash(String cpfHash);
 
     /** Cadastro do entregador a partir da credencial, na autenticacao (UC07). */

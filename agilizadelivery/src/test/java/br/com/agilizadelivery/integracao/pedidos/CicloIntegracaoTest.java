@@ -195,6 +195,21 @@ class CicloIntegracaoTest {
     }
 
     @Test
+    @DisplayName("Loja INATIVA nao recebe pedidos do worker (HU12)")
+    void lojaInativa() {
+        loja = cenario.estabelecimento(
+                br.com.agilizadelivery.entity.model.enums.StatusEstabelecimento.INATIVO, (short) 5);
+        configuracao(true);
+        CicloIntegracao ciclo = cicloComSimulador();
+
+        for (int i = 0; i < 10; i++) {
+            ciclo.executar();
+        }
+
+        assertThat(aguardando()).isEmpty();
+    }
+
+    @Test
     @DisplayName("Configuracao inativa nao gera nada")
     void configuracaoInativa() {
         configuracao(false);
