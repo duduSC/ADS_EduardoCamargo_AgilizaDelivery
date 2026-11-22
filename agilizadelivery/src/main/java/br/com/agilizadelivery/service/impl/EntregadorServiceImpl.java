@@ -241,7 +241,7 @@ public class EntregadorServiceImpl implements EntregadorService {
 
     private LoteDoEntregadorResponse montarLote(LoteEntrega lote) {
         List<EntregaDoEntregadorResponse> entregas = entregaRepository
-                .findByLoteIdOrderByOrdemRotaAsc(lote.getId()).stream()
+                .findDoLoteComItens(lote.getId()).stream()
                 .map(EntregadorServiceImpl::montarEntrega)
                 .toList();
         return new LoteDoEntregadorResponse(

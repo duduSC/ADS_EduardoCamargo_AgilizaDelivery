@@ -54,12 +54,17 @@ class LocalizacaoEntregaTest {
         entrega.setValorRepasse(null);
     }
 
+    private void localizar() {
+        localizacao.aplicar(entrega, localizacao.consultar(entrega.getCoordenada(), entrega.getEnderecoCompleto(),
+                entrega.getEstabelecimento().getCoordenada()));
+    }
+
     @Test
     @DisplayName("Deve calcular a distância loja -> cliente e aplicar a faixa quando há coordenada")
     void deveCalcularDistanciaEAplicarFaixa() {
         when(rotas.distanciaKm(any(), any())).thenReturn(Optional.of(reais("4.70")));
 
-        localizacao.localizar(entrega);
+        localizar();
 
         assertEquals(reais("4.70"), entrega.getDistanciaKm());
         assertFalse(entrega.getPendenteRevisao());
@@ -75,7 +80,7 @@ class LocalizacaoEntregaTest {
         when(geocodificacao.geocodificar(entrega.getEnderecoCompleto())).thenReturn(Optional.of(encontrada));
         when(rotas.distanciaKm(any(), any())).thenReturn(Optional.of(reais("2.10")));
 
-        localizacao.localizar(entrega);
+        localizar();
 
         assertSame(encontrada, entrega.getCoordenada());
         assertFalse(entrega.getPendenteRevisao());
@@ -87,7 +92,7 @@ class LocalizacaoEntregaTest {
         entrega.setCoordenada(null);
         when(geocodificacao.geocodificar(entrega.getEnderecoCompleto())).thenReturn(Optional.empty());
 
-        localizacao.localizar(entrega);
+        localizar();
 
         assertTrue(entrega.getPendenteRevisao());
         assertEquals(MotivoRevisao.SEM_COORDENADA, entrega.getMotivoRevisao());
@@ -101,7 +106,7 @@ class LocalizacaoEntregaTest {
     void deveMarcarSemDistancia() {
         when(rotas.distanciaKm(any(), any())).thenReturn(Optional.empty());
 
-        localizacao.localizar(entrega);
+        localizar();
 
         assertTrue(entrega.getPendenteRevisao());
         assertEquals(MotivoRevisao.SEM_DISTANCIA, entrega.getMotivoRevisao());
@@ -115,7 +120,7 @@ class LocalizacaoEntregaTest {
         entrega.setMotivoRevisao(MotivoRevisao.SEM_DISTANCIA);
         when(rotas.distanciaKm(any(), any())).thenReturn(Optional.of(reais("3.00")));
 
-        localizacao.localizar(entrega);
+        localizar();
 
         assertFalse(entrega.getPendenteRevisao());
         assertNull(entrega.getMotivoRevisao());
@@ -127,7 +132,7 @@ class LocalizacaoEntregaTest {
         entrega.contestar();
         when(rotas.distanciaKm(any(), any())).thenReturn(Optional.of(reais("3.00")));
 
-        localizacao.localizar(entrega);
+        localizar();
 
         assertTrue(entrega.getPendenteRevisao());
         assertEquals(MotivoRevisao.CONTESTACAO_ENTREGADOR, entrega.getMotivoRevisao());

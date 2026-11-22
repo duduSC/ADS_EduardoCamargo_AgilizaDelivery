@@ -70,7 +70,7 @@ public class CicloIntegracao {
                 processar(configuracao, provedor);
             } catch (RuntimeException e) {
                 log.error("Erro inesperado no ciclo de integração da configuração {}: {}",
-                        configuracao.getId(), e.getMessage());
+                        configuracao.getId(), e.getClass().getSimpleName());
             }
         }
     }
@@ -142,7 +142,7 @@ public class CicloIntegracao {
             EtapaFalhaIntegracao etapa, TentativasEsgotadas erro, String payloadJson) {
         log.warn("Integração {} da loja {}: etapa {} falhou após {} tentativas (pedido {}): {}",
                 configuracao.getProvedor(), configuracao.getEstabelecimento().getId(), etapa, erro.tentativas,
-                idExterno, erro.getMessage());
+                idExterno, erro.tipoDaCausa());
         FalhaIntegracao falha = new FalhaIntegracao();
         falha.setConfiguracaoIntegracao(configuracao);
         falha.setIdExterno(idExterno);
@@ -163,6 +163,11 @@ public class CicloIntegracao {
         TentativasEsgotadas(int tentativas, RuntimeException causa) {
             super(mensagem(causa), causa);
             this.tentativas = tentativas;
+        }
+
+        /** Para o log: a mensagem do banco traz os valores da linha (telefone do cliente). */
+        String tipoDaCausa() {
+            return getCause() == null ? "sem detalhe" : getCause().getClass().getSimpleName();
         }
 
         private static String mensagem(RuntimeException causa) {
