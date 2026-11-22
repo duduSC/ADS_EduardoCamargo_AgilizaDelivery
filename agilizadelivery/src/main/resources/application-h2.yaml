@@ -1,5 +1,6 @@
 spring:
     datasource:
+        # PROVISORIO (T014): LOCK_TIMEOUT de 10 s, como no postgres
         url: jdbc:h2:mem:agiliza;MODE=PostgreSQL;DATABASE_TO_LOWER=TRUE;DB_CLOSE_DELAY=-1;LOCK_TIMEOUT=10000
         driver-class-name: org.h2.Driver
         username: adm
