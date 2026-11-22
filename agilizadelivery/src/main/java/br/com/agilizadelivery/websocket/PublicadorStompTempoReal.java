@@ -30,13 +30,21 @@ public class PublicadorStompTempoReal implements PublicadorTempoReal {
 
     @Override
     public void publicarEntrega(UUID estabelecimentoId, String tipo, EntregaResponse entrega) {
-        String destino = "/topic/estabelecimento/" + estabelecimentoId + "/entregas";
-        messagingTemplate.convertAndSend(destino, new EventoEntrega(estabelecimentoId, tipo, entrega));
+        messagingTemplate.convertAndSend(
+                topicoEntregas(estabelecimentoId), new EventoEntrega(estabelecimentoId, tipo, entrega));
     }
 
     @Override
     public void publicarFrota(UUID estabelecimentoId, String tipo, MotoboyResponse motoboy) {
-        String destino = "/topic/estabelecimento/" + estabelecimentoId + "/frota";
-        messagingTemplate.convertAndSend(destino, new EventoFrota(estabelecimentoId, tipo, motoboy));
+        messagingTemplate.convertAndSend(
+                topicoFrota(estabelecimentoId), new EventoFrota(estabelecimentoId, tipo, motoboy));
+    }
+
+    static String topicoEntregas(UUID estabelecimentoId) {
+        return "/topic/estabelecimento/" + estabelecimentoId + "/entregas";
+    }
+
+    static String topicoFrota(UUID estabelecimentoId) {
+        return "/topic/estabelecimento/" + estabelecimentoId + "/frota";
     }
 }
