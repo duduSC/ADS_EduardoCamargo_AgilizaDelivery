@@ -40,6 +40,22 @@ public class BuscadorTenant {
         this.motoboyRepository = motoboyRepository;
     }
 
+    /**
+     * Trava de escrita da loja ate o fim da transacao (T014): despacho,
+     * lote, status, caixa, recibo, ajuste e contestacao de uma mesma loja
+     * acontecem um depois do outro, e cada um enxerga o que o anterior
+     * confirmou. Sem isso, duas requisicoes simultaneas cobram a entrega
+     * duas vezes ou escrevem em caixa que fechou.
+     *
+     * Tem de ser a primeira coisa da transacao: o que foi lido antes dela
+     * pode estar velho. Uma trava por loja, e nao por linha, porque assim
+     * nao ha ordem de travas para errar; a disputa e so dentro da loja.
+     * Posicao do GPS e entrega nova nao a usam.
+     */
+    public void travarLoja(UUID estabelecimentoId) {
+        estabelecimentoRepository.bloquearPorId(estabelecimentoId);
+    }
+
     public Estabelecimento estabelecimento(UUID estabelecimentoId) {
         return estabelecimentoRepository.findById(estabelecimentoId)
                 .orElseThrow(() -> EntidadeNaoEncontradaException.porId(Estabelecimento.class, estabelecimentoId));

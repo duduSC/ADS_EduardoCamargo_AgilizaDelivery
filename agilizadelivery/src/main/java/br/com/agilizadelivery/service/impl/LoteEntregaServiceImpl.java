@@ -81,6 +81,7 @@ public class LoteEntregaServiceImpl implements LoteEntregaService {
             UUID estabelecimentoId,
             UUID usuarioDespachanteId,
             DespacharLoteRequest request) {
+        buscador.travarLoja(estabelecimentoId);
         Estabelecimento estabelecimento = buscador.estabelecimentoAtivo(estabelecimentoId);
         Usuario despachante = buscador.usuarioComPerfil(
                 estabelecimentoId, usuarioDespachanteId, PerfilUsuario.OPERADOR, PerfilUsuario.ADMIN_RESTAURANTE);
@@ -151,6 +152,7 @@ public class LoteEntregaServiceImpl implements LoteEntregaService {
     @Override
     @Transactional
     public LoteEntregaResponse iniciarRota(UUID estabelecimentoId, UUID loteId, UUID motoboyId) {
+        buscador.travarLoja(estabelecimentoId);
         LoteEntrega lote = buscar(estabelecimentoId, loteId);
         exigirDono(lote, motoboyId);
         if (lote.getStatus() != StatusLote.DESPACHADO) {
@@ -177,6 +179,7 @@ public class LoteEntregaServiceImpl implements LoteEntregaService {
     @Override
     @Transactional
     public LoteEntregaResponse devolverDespacho(UUID estabelecimentoId, UUID loteId, UUID usuarioId) {
+        buscador.travarLoja(estabelecimentoId);
         LoteEntrega lote = buscar(estabelecimentoId, loteId);
         Usuario autor = buscador.usuarioComPerfil(
                 estabelecimentoId, usuarioId, PerfilUsuario.OPERADOR, PerfilUsuario.ADMIN_RESTAURANTE);

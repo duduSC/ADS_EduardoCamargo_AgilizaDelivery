@@ -1,5 +1,6 @@
 package br.com.agilizadelivery.entity.model;
 
+import org.hibernate.annotations.DynamicUpdate;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
 
@@ -48,6 +49,9 @@ import lombok.Setter;
 @NoArgsConstructor
 @AllArgsConstructor
 @Entity
+// A posicao do GPS (a cada 20 s, sem trava) grava so as suas colunas e nao
+// desfaz bloqueio nem EM_ROTA gravados no meio do caminho.
+@DynamicUpdate
 @Table(
         name = "motoboy",
         uniqueConstraints = @UniqueConstraint(name = "uk_motoboy_cpf_hash", columnNames = "cpf_hash"))

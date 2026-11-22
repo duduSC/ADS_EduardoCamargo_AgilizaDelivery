@@ -37,6 +37,7 @@ public class ConfiguracaoIntegracaoServiceImpl implements ConfiguracaoIntegracao
     public ConfiguracaoIntegracaoResponse salvar(
             UUID estabelecimentoId,
             SalvarConfiguracaoIntegracaoRequest request) {
+        buscador.travarLoja(estabelecimentoId);
         String provedor = Provedores.normalizar(request.provedor());
         Estabelecimento estabelecimento = buscador.estabelecimentoAtivo(estabelecimentoId);
 

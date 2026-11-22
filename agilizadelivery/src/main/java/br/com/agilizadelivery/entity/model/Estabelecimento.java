@@ -1,5 +1,6 @@
 package br.com.agilizadelivery.entity.model;
 
+import org.hibernate.annotations.DynamicUpdate;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
 
@@ -39,6 +40,9 @@ import org.hibernate.validator.constraints.br.CNPJ;
 @NoArgsConstructor
 @AllArgsConstructor
 @Entity
+// Editar parametros grava so o que mudou e nao desfaz a inativacao
+// feita pelo Administrador Geral ao mesmo tempo.
+@DynamicUpdate
 @Table(
         name = "estabelecimento",
         uniqueConstraints = @UniqueConstraint(name = "uk_estabelecimento_cnpj", columnNames = "cnpj"))

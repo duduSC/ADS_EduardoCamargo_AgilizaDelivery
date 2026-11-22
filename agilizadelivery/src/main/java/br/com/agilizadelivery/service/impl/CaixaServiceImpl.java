@@ -51,6 +51,7 @@ public class CaixaServiceImpl implements CaixaService {
     @Override
     @Transactional
     public CaixaResponse abrirCaixa(UUID estabelecimentoId, AbrirCaixaRequest request) {
+        buscador.travarLoja(estabelecimentoId);
         LocalDate dataReferencia = request.dataReferencia();
         log.info("Tentativa de abertura de caixa para estabelecimento '{}' na data '{}'",
                 estabelecimentoId, dataReferencia);
@@ -95,6 +96,7 @@ public class CaixaServiceImpl implements CaixaService {
     @Override
     @Transactional
     public CaixaResponse fecharCaixa(UUID estabelecimentoId, UUID caixaId, UUID usuarioFechamentoId) {
+        buscador.travarLoja(estabelecimentoId);
         log.info("Fechando caixa '{}' pelo usuário '{}'", caixaId, usuarioFechamentoId);
 
         Caixa caixa = buscar(estabelecimentoId, caixaId);
@@ -129,6 +131,7 @@ public class CaixaServiceImpl implements CaixaService {
             UUID caixaId,
             UUID usuarioReaberturaId,
             String motivoReabertura) {
+        buscador.travarLoja(estabelecimentoId);
         log.info("Solicitação de reabertura do caixa '{}' pelo usuário '{}'", caixaId, usuarioReaberturaId);
 
         Caixa caixa = buscar(estabelecimentoId, caixaId);

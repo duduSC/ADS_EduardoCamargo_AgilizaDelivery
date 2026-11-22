@@ -154,6 +154,7 @@ public class EntregaServiceImpl implements EntregaService {
     @Override
     @Transactional
     public EntregaResponse marcarProntaParaDespacho(UUID estabelecimentoId, UUID entregaId, LocalDateTime prontaEm) {
+        buscador.travarLoja(estabelecimentoId);
         Entrega entrega = buscar(estabelecimentoId, entregaId);
         if (entrega.getStatus() != StatusEntrega.AGUARDANDO_DESPACHO) {
             throw new TransicaoEstadoInvalidaException(
@@ -174,6 +175,7 @@ public class EntregaServiceImpl implements EntregaService {
             UUID entregaId,
             UUID usuarioId,
             AlterarStatusEntregaRequest request) {
+        buscador.travarLoja(estabelecimentoId);
         StatusEntrega destino = request.status();
         if (destino != StatusEntrega.ENTREGUE && destino != StatusEntrega.FALHA) {
             throw new TransicaoEstadoInvalidaException(
@@ -208,6 +210,7 @@ public class EntregaServiceImpl implements EntregaService {
     @Override
     @Transactional
     public EntregaResponse cancelar(UUID estabelecimentoId, UUID entregaId, UUID usuarioId, String motivo) {
+        buscador.travarLoja(estabelecimentoId);
         if (motivo == null || motivo.isBlank()) {
             throw new RegraDeNegocioException("O motivo do cancelamento é obrigatório.");
         }
@@ -243,6 +246,7 @@ public class EntregaServiceImpl implements EntregaService {
             BigDecimal latitude,
             BigDecimal longitude,
             UUID usuarioId) {
+        buscador.travarLoja(estabelecimentoId);
         Entrega entrega = buscar(estabelecimentoId, entregaId);
         buscador.usuarioComPerfil(
                 estabelecimentoId, usuarioId, PerfilUsuario.OPERADOR, PerfilUsuario.ADMIN_RESTAURANTE);
@@ -261,6 +265,7 @@ public class EntregaServiceImpl implements EntregaService {
     @Override
     @Transactional
     public EntregaResponse contestar(UUID estabelecimentoId, UUID entregaId, UUID motoboyId) {
+        buscador.travarLoja(estabelecimentoId);
         Entrega entrega = buscar(estabelecimentoId, entregaId);
         buscador.motoboy(estabelecimentoId, motoboyId);
         if (entrega.getLote() == null || !motoboyId.equals(entrega.getLote().getMotoboy().getId())) {
@@ -294,6 +299,7 @@ public class EntregaServiceImpl implements EntregaService {
             UUID usuarioId,
             BigDecimal valorRepasse,
             String motivo) {
+        buscador.travarLoja(estabelecimentoId);
         if (motivo == null || motivo.isBlank()) {
             throw new RegraDeNegocioException("O motivo da resolução da revisão é obrigatório.");
         }

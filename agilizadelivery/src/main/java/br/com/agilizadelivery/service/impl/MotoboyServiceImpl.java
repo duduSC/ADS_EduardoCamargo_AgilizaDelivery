@@ -87,6 +87,7 @@ public class MotoboyServiceImpl implements MotoboyService {
     @Override
     @Transactional
     public MotoboyResponse editar(UUID estabelecimentoId, UUID motoboyId, EditarMotoboyRequest request) {
+        buscador.travarLoja(estabelecimentoId);
         Motoboy motoboy = buscador.motoboy(estabelecimentoId, motoboyId);
         if (request.telefone() != null) {
             motoboy.setTelefone(request.telefone());
@@ -131,6 +132,7 @@ public class MotoboyServiceImpl implements MotoboyService {
             UUID estabelecimentoId,
             UUID motoboyId,
             StatusCadastroMotoboy status) {
+        buscador.travarLoja(estabelecimentoId);
         Motoboy motoboy = buscador.motoboy(estabelecimentoId, motoboyId);
         if (status == StatusCadastroMotoboy.BLOQUEADO) {
             if (motoboy.getStatusDisponibilidade() == StatusDisponibilidadeMotoboy.EM_ROTA) {
@@ -140,7 +142,10 @@ public class MotoboyServiceImpl implements MotoboyService {
             motoboy.setStatusDisponibilidade(StatusDisponibilidadeMotoboy.OFFLINE);
         }
         motoboy.setStatusCadastro(status);
-        return DtoMapper.toResponse(repository.save(motoboy));
+        MotoboyResponse resposta = DtoMapper.toResponse(repository.save(motoboy));
+        // o bloqueio tira o entregador de ONLINE: o monitoramento precisa saber (RNF06)
+        publicador.publicarFrota(estabelecimentoId, "DISPONIBILIDADE_ALTERADA", resposta);
+        return resposta;
     }
 
     @Override
@@ -149,6 +154,7 @@ public class MotoboyServiceImpl implements MotoboyService {
             UUID estabelecimentoId,
             UUID motoboyId,
             AlterarDisponibilidadeMotoboyRequest request) {
+        buscador.travarLoja(estabelecimentoId);
         Motoboy motoboy = buscador.motoboy(estabelecimentoId, motoboyId);
         StatusDisponibilidadeMotoboy atual = motoboy.getStatusDisponibilidade();
         StatusDisponibilidadeMotoboy destino = request.status();
