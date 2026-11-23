@@ -46,7 +46,7 @@ class SimuladorAdapterTest {
         configuracao.setProvedor(Provedores.SIMULADOR);
         configuracao.setMerchantId("demo");
         simulador = new SimuladorAdapter(entregaRepository,
-                new IntegracaoPedidosProperties(null, null), json, new Random(7));
+                new IntegracaoPedidosProperties(null, null), json, new Random(7), false);
     }
 
     private List<PedidoRecebido> gerarMuitos() {
@@ -72,11 +72,9 @@ class SimuladorAdapterTest {
     }
 
     @Test
-    @DisplayName("Dados coerentes: raio de 6 km, 1 a 4 itens, totais, pagamento e troco")
+    @DisplayName("Dados coerentes: 1 a 4 itens, totais, pagamento e troco")
     void dadosCoerentes() {
         for (PedidoRecebido pedido : gerarMuitos()) {
-            Coordenada loja = configuracao.getEstabelecimento().getCoordenada();
-            assertThat(distanciaKm(loja, pedido.coordenada())).isLessThanOrEqualTo(6.01);
             assertThat(pedido.itens()).hasSizeBetween(1, 4).allSatisfy(item -> {
                 assertThat(item.descricao()).isNotBlank();
                 assertThat(item.quantidade()).isPositive();
@@ -121,6 +119,55 @@ class SimuladorAdapterTest {
         for (int i = 0; i < 50; i++) {
             assertThat(simulador.buscarNovosPedidos(configuracao)).hasSizeLessThanOrEqualTo(1);
         }
+    }
+
+    @Test
+    @DisplayName("A lista tem ao menos 25 enderecos reais, sem repeticao, com CEP de Passo Fundo e bairro mapeado")
+    void listaDeEnderecos() {
+        assertThat(EnderecosPassoFundo.ENDERECOS).hasSizeGreaterThanOrEqualTo(25)
+                .extracting(EnderecosPassoFundo.Endereco::linha).doesNotHaveDuplicates();
+        assertThat(EnderecosPassoFundo.ENDERECOS).allSatisfy(endereco -> {
+            assertThat(endereco.cep()).matches("990\\d{2}-\\d{3}");
+            assertThat(endereco.numero()).isPositive();
+            assertThat(EnderecosPassoFundo.CENTRO_DO_BAIRRO).containsKey(endereco.bairro());
+        });
+    }
+
+    @Test
+    @DisplayName("Sem chave: endereco da lista e coordenada a ate 300 m do centro do bairro")
+    void semChaveCoordenadaDoBairro() {
+        List<PedidoRecebido> pedidos = gerarMuitos();
+        assertThat(pedidos).isNotEmpty().allSatisfy(pedido -> {
+            EnderecosPassoFundo.Endereco endereco = daLista(pedido);
+            assertThat(pedido.bairro()).isEqualTo(endereco.bairro());
+            assertThat(pedido.cep()).isEqualTo(endereco.cep());
+            assertThat(pedido.coordenada()).isNotNull();
+            assertThat(distanciaKm(EnderecosPassoFundo.CENTRO_DO_BAIRRO.get(endereco.bairro()), pedido.coordenada()))
+                    .isLessThanOrEqualTo(0.301);
+        });
+        assertThat(pedidos.stream().map(PedidoRecebido::enderecoCompleto).distinct().count()).isGreaterThan(10);
+    }
+
+    @Test
+    @DisplayName("Com chave: o pedido vai sem coordenada, para o backend geocodificar o endereco")
+    void comChaveSemCoordenada() {
+        simulador = new SimuladorAdapter(entregaRepository,
+                new IntegracaoPedidosProperties(null, null), json, new Random(7), true);
+        List<PedidoRecebido> pedidos = gerarMuitos();
+        assertThat(pedidos).isNotEmpty().allSatisfy(pedido -> {
+            daLista(pedido);
+            assertThat(pedido.coordenada()).isNull();
+            JsonNode entrega = json.readTree(pedido.payloadJson()).get("deliveryAddress");
+            assertThat(entrega.get("latitude").isNull()).isTrue();
+            assertThat(entrega.get("postalCode").asString()).isEqualTo(pedido.cep());
+        });
+    }
+
+    private static EnderecosPassoFundo.Endereco daLista(PedidoRecebido pedido) {
+        return EnderecosPassoFundo.ENDERECOS.stream()
+                .filter(endereco -> endereco.linha().equals(pedido.enderecoCompleto()))
+                .findFirst()
+                .orElseThrow(() -> new AssertionError("fora da lista: " + pedido.enderecoCompleto()));
     }
 
     private static double distanciaKm(Coordenada a, Coordenada b) {

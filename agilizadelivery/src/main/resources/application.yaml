@@ -73,7 +73,6 @@ agiliza:
       max-tentativas: 5
     simulador:
       max-por-ciclo: 2
-      raio-km: 6
       # Para de gerar quando a loja tiver este numero de entregas aguardando.
       limite-aguardando: 15
   # Carga de demonstracao (D009, T010). SO DESENVOLVIMENTO: desligada aqui

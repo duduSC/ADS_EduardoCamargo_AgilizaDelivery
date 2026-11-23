@@ -85,7 +85,12 @@ PUT /api/integracoes   (token de loja@agiliza.dev)
 
 Na coleção, o request é Loja → "Ligar o simulador de pedidos". Para desligar, use `"ativo": false`.
 
-A cada ciclo surgem de 0 a 2 pedidos fictícios, com itens, pagamento e coordenada a até 6 km da loja. Cada um vira uma entrega AGUARDANDO_DESPACHO, que é publicada em `/topic/estabelecimento/{id}/entregas` com o tipo `CRIADA`.
+A cada ciclo surgem de 0 a 2 pedidos fictícios, com itens e pagamento. O endereço é sorteado de uma lista fixa de 32 endereços reais de Passo Fundo (`EnderecosPassoFundo`), a até cerca de 3 km da loja. Rua, bairro e CEP vêm da base dos Correios, consultada pelo ViaCEP.
+
+- **Com `GOOGLE_MAPS_API_KEY`:** o pedido vai sem coordenada. O backend geocodifica o endereço, e o km é o da rota de moto até ele.
+- **Sem a chave (D009):** vai o centro do bairro no OpenStreetMap, deslocado até 300 m, para a entrega não cair em revisão. Esse caminho é PROVISÓRIO: o km é aproximado e não sai do endereço exato.
+
+Cada pedido vira uma entrega AGUARDANDO_DESPACHO, que é publicada em `/topic/estabelecimento/{id}/entregas` com o tipo `CRIADA`.
 
 O simulador para de gerar quando a loja tem 15 ou mais entregas aguardando despacho. Quando a importação de um pedido falha, ele é repetido até 5 vezes com recuo exponencial. Se todas as tentativas falharem, a falha vai para `GET /api/falhas-integracao` e o ciclo continua.
 

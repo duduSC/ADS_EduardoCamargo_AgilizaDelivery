@@ -95,7 +95,7 @@ class CicloIntegracaoTest {
     }
 
     private CicloIntegracao cicloComSimulador() {
-        return cicloCom(new SimuladorAdapter(entregaRepository, PARAMETROS, objectMapper, new Random(11)));
+        return cicloCom(new SimuladorAdapter(entregaRepository, PARAMETROS, objectMapper, new Random(11), false));
     }
 
     private List<Entrega> aguardando() {

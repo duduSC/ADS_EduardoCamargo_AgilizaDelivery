@@ -17,6 +17,7 @@ import br.com.agilizadelivery.entity.model.ConfiguracaoIntegracao;
 import br.com.agilizadelivery.entity.model.embeddable.Coordenada;
 import br.com.agilizadelivery.entity.model.enums.FormaPagamento;
 import br.com.agilizadelivery.entity.model.enums.StatusEntrega;
+import br.com.agilizadelivery.integracao.maps.GoogleMapsProperties;
 import br.com.agilizadelivery.repository.EntregaRepository;
 import br.com.agilizadelivery.service.support.Provedores;
 import lombok.extern.slf4j.Slf4j;
@@ -26,9 +27,16 @@ import tools.jackson.databind.ObjectMapper;
  * Provedor sintetico de pedidos (DVP 1.5.6, risco R01, D009).
  *
  * A cada consulta gera de 0 a N pedidos ficticios (N = max-por-ciclo),
- * com cliente, endereco, itens e pagamento plausiveis e coordenada
- * aleatoria num raio em torno da loja. Para de gerar quando a loja ja
- * tem o limite de entregas AGUARDANDO_DESPACHO, para nao inundar o mapa.
+ * com cliente, itens e pagamento plausiveis e um endereco real de Passo
+ * Fundo, sorteado da lista fixa de EnderecosPassoFundo (T015). Para de gerar
+ * quando a loja ja tem o limite de entregas AGUARDANDO_DESPACHO, para nao
+ * inundar o mapa.
+ *
+ * Com a chave do Google, o pedido vai sem coordenada: o backend geocodifica
+ * o endereco e a distancia sai da rota ate ele (DVP 1.5.6, passo 5). Sem a
+ * chave (D009), a geocodificacao nao existe; para a entrega nao cair em
+ * revisao, vai o centro do bairro no OpenStreetMap, deslocado ate 300 m
+ * para os pinos nao se sobreporem (PROVISORIO, so nesse modo).
  *
  * O payload devolvido imita a resposta de um provedor real e e gravado
  * intacto em PEDIDO_EXTERNO (RNF13).
@@ -38,6 +46,8 @@ import tools.jackson.databind.ObjectMapper;
 public class SimuladorAdapter implements ProvedorDePedidos {
 
     private static final double KM_POR_GRAU = 111.32;
+    /** Deslocamento maximo em torno do centro do bairro, so no modo sem chave. */
+    private static final double DESLOCAMENTO_KM = 0.3;
     private static final BigDecimal TAXA_ENTREGA = new BigDecimal("7.00");
 
     private static final String[] NOMES = {
@@ -47,15 +57,6 @@ public class SimuladorAdapter implements ProvedorDePedidos {
     private static final String[] SOBRENOMES = {
         "Souza", "Oliveira", "Pereira", "Lima", "Costa", "Ferreira", "Rodrigues", "Almeida", "Carvalho", "Ribeiro",
         "Schneider", "Zanella", "Bortolini", "Dal Moro", "Rossetto"
-    };
-    private static final String[] RUAS = {
-        "Rua Morom", "Av. Brasil Centro", "Rua Independência", "Rua Paissandu", "Rua Uruguai",
-        "Av. Presidente Vargas", "Rua Teixeira Soares", "Rua Bento Gonçalves", "Rua Coronel Chicuta",
-        "Rua Capitão Eleutério", "Av. Sete de Setembro", "Rua General Neto"
-    };
-    private static final String[] BAIRROS = {
-        "Centro", "Boqueirão", "Vila Rodrigues", "São Cristóvão", "Petrópolis", "Lucas Araújo", "Vera Cruz",
-        "Vila Luiza", "Annes"
     };
     private static final String[] COMPLEMENTOS = {null, null, "Apto 101", "Apto 304", "Casa 2", "Bloco B", "Fundos"};
     private static final String[] REFERENCIAS = {
@@ -81,26 +82,36 @@ public class SimuladorAdapter implements ProvedorDePedidos {
     private final IntegracaoPedidosProperties.Simulador parametros;
     private final ObjectMapper objectMapper;
     private final RandomGenerator aleatorio;
+    private final boolean geocodificarPeloEndereco;
     private final AtomicInteger numeroExibicao = new AtomicInteger(1000);
 
     @Autowired
     public SimuladorAdapter(
             EntregaRepository entregaRepository,
             IntegracaoPedidosProperties properties,
+            GoogleMapsProperties maps,
             ObjectMapper objectMapper) {
-        this(entregaRepository, properties, objectMapper, RandomGenerator.getDefault());
+        this(entregaRepository, properties, objectMapper, RandomGenerator.getDefault(), maps.possuiChave());
     }
 
-    /** Construtor com o gerador aleatorio explicito, para testes reprodutiveis. */
+    /**
+     * Construtor com o gerador aleatorio explicito, para testes reprodutiveis.
+     * geocodificarPeloEndereco e verdadeiro quando ha chave do Google.
+     */
     public SimuladorAdapter(
             EntregaRepository entregaRepository,
             IntegracaoPedidosProperties properties,
             ObjectMapper objectMapper,
-            RandomGenerator aleatorio) {
+            RandomGenerator aleatorio,
+            boolean geocodificarPeloEndereco) {
         this.entregaRepository = entregaRepository;
         this.parametros = properties.simulador();
         this.objectMapper = objectMapper;
         this.aleatorio = aleatorio;
+        this.geocodificarPeloEndereco = geocodificarPeloEndereco;
+        log.info("Simulador de pedidos: {}.", geocodificarPeloEndereco
+                ? "enderecos sem coordenada, geocodificados pelo backend"
+                : "sem chave do Google, coordenada aproximada do bairro (PROVISORIO, D009)");
     }
 
     @Override
@@ -119,10 +130,9 @@ public class SimuladorAdapter implements ProvedorDePedidos {
             return List.of();
         }
         int quantidade = (int) Math.min(vagas, aleatorio.nextInt(parametros.maxPorCiclo() + 1));
-        Coordenada loja = configuracao.getEstabelecimento().getCoordenada();
         List<PedidoRecebido> pedidos = new ArrayList<>(quantidade);
         for (int i = 0; i < quantidade; i++) {
-            pedidos.add(gerar(configuracao.getMerchantId(), loja));
+            pedidos.add(gerar(configuracao.getMerchantId()));
         }
         return pedidos;
     }
@@ -132,18 +142,20 @@ public class SimuladorAdapter implements ProvedorDePedidos {
     public void confirmarRecebimento(ConfiguracaoIntegracao configuracao, String idExterno) {
     }
 
-    private PedidoRecebido gerar(String merchantId, Coordenada loja) {
+    private PedidoRecebido gerar(String merchantId) {
         String idExterno = "SIM-" + UUID.randomUUID();
         String numero = String.valueOf(numeroExibicao.incrementAndGet());
         String nome = sortear(NOMES) + " " + sortear(SOBRENOMES);
         String telefone = "549" + (91000000 + aleatorio.nextInt(9000000));
-        String bairro = sortear(BAIRROS);
-        String endereco = sortear(RUAS) + ", " + (10 + aleatorio.nextInt(1990)) + " - " + bairro + ", Passo Fundo/RS";
-        String cep = "990" + (10 + aleatorio.nextInt(89)) + "-" + String.format("%03d", aleatorio.nextInt(1000));
+        EnderecosPassoFundo.Endereco sorteado =
+                EnderecosPassoFundo.ENDERECOS.get(aleatorio.nextInt(EnderecosPassoFundo.ENDERECOS.size()));
+        String bairro = sorteado.bairro();
+        String endereco = sorteado.linha();
+        String cep = sorteado.cep();
         String complemento = sortear(COMPLEMENTOS);
         String referencia = sortear(REFERENCIAS);
         String observacoes = sortear(OBSERVACOES);
-        Coordenada coordenada = pontoProximo(loja);
+        Coordenada coordenada = geocodificarPeloEndereco ? null : pertoDoCentro(bairro);
 
         List<PedidoRecebido.Item> itens = new ArrayList<>();
         int qtdItens = 1 + aleatorio.nextInt(4);
@@ -170,16 +182,17 @@ public class SimuladorAdapter implements ProvedorDePedidos {
                 observacoes, itens, payload);
     }
 
-    /** Ponto uniforme num disco de raio raioKm em torno da loja. */
-    private Coordenada pontoProximo(Coordenada loja) {
-        double distancia = parametros.raioKm() * Math.sqrt(aleatorio.nextDouble());
+    /** Ponto uniforme num disco de DESLOCAMENTO_KM em torno do centro do bairro (so sem chave). */
+    private Coordenada pertoDoCentro(String bairro) {
+        Coordenada centro = EnderecosPassoFundo.CENTRO_DO_BAIRRO.get(bairro);
+        double distancia = DESLOCAMENTO_KM * Math.sqrt(aleatorio.nextDouble());
         double angulo = 2 * Math.PI * aleatorio.nextDouble();
-        double latitude = loja.getLatitude().doubleValue();
+        double latitude = centro.getLatitude().doubleValue();
         double dLat = distancia * Math.cos(angulo) / KM_POR_GRAU;
         double dLng = distancia * Math.sin(angulo) / (KM_POR_GRAU * Math.cos(Math.toRadians(latitude)));
         return new Coordenada(
                 BigDecimal.valueOf(latitude + dLat).setScale(7, RoundingMode.HALF_UP),
-                BigDecimal.valueOf(loja.getLongitude().doubleValue() + dLng).setScale(7, RoundingMode.HALF_UP));
+                BigDecimal.valueOf(centro.getLongitude().doubleValue() + dLng).setScale(7, RoundingMode.HALF_UP));
     }
 
     /** Proxima nota "redonda" (multiplo de R$ 50) acima do total. */
@@ -205,8 +218,8 @@ public class SimuladorAdapter implements ProvedorDePedidos {
         entrega.put("postalCode", cep);
         entrega.put("complement", complemento);
         entrega.put("reference", referencia);
-        entrega.put("latitude", coordenada.getLatitude());
-        entrega.put("longitude", coordenada.getLongitude());
+        entrega.put("latitude", coordenada == null ? null : coordenada.getLatitude());
+        entrega.put("longitude", coordenada == null ? null : coordenada.getLongitude());
         corpo.put("deliveryAddress", entrega);
         corpo.put("items", itens.stream()
                 .map(item -> Map.of("name", item.descricao(), "quantity", item.quantidade(),
