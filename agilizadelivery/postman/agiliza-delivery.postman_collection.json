@@ -2198,6 +2198,97 @@
           }
         },
         {
+          "name": "Relatório do dia (hoje)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/relatorios/dia",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "relatorios",
+                "dia"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tokenOperador}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "const r = pm.response.json();",
+                  "pm.test('totais calculados no servidor', () => {",
+                  "  pm.expect(r).to.include.keys('data', 'totalEntregas', 'entregues', 'falhas', 'canceladas', 'entregadoresQueTrabalharam', 'valorTotalRepasse', 'valorPago', 'valorAPagar', 'porEntregador');",
+                  "  pm.expect(r.totalEntregas).to.eql(r.entregues + r.falhas + r.canceladas);",
+                  "  pm.expect(r.entregadoresQueTrabalharam).to.eql(r.porEntregador.length);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Relatório de um dia",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/relatorios/dia?data={{hoje}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "relatorios",
+                "dia"
+              ],
+              "query": [
+                {
+                  "key": "data",
+                  "value": "{{hoje}}"
+                }
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tokenOperador}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('data pedida', () => pm.expect(pm.response.json().data).to.eql(pm.environment.get('hoje')));"
+                ]
+              }
+            }
+          ]
+        },
+        {
           "name": "Falhas de integração pendentes",
           "request": {
             "method": "GET",

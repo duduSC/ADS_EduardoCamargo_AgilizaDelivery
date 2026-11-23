@@ -53,6 +53,26 @@ public interface EntregaRepository extends JpaRepository<Entrega, UUID> {
 
     List<Entrega> findByReciboId(UUID reciboId);
 
+    /**
+     * Entregas da loja finalizadas em [inicio, fim), com o entregador do
+     * lote e o recibo numa consulta so, para o relatorio do dia (D013). A
+     * cancelada antes do despacho vem sem lote.
+     */
+    @Query("""
+            select e from Entrega e
+            left join fetch e.lote l
+            left join fetch l.motoboy m
+            left join fetch m.usuario
+            left join fetch e.recibo
+            where e.estabelecimento.id = :estabelecimentoId
+              and e.finalizadaEm >= :inicio
+              and e.finalizadaEm < :fim
+            """)
+    List<Entrega> findFinalizadasNoPeriodoComEntregador(
+            @Param("estabelecimentoId") UUID estabelecimentoId,
+            @Param("inicio") LocalDateTime inicio,
+            @Param("fim") LocalDateTime fim);
+
     /** Entregas finalizadas por um entregador no periodo (UC03 e UC08). */
     @EntityGraph(attributePaths = "faixaPreco")
     List<Entrega> findByEstabelecimentoIdAndLoteMotoboyIdAndFinalizadaEmBetweenOrderByFinalizadaEmAsc(
