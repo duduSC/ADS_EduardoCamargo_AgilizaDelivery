@@ -34,7 +34,7 @@ class GoogleGeocodingServicoDeGeocodificacaoTest {
         RestClient.Builder builder = RestClient.builder();
         servidor = MockRestServiceServer.bindTo(builder).build();
         servico = new GoogleGeocodingServicoDeGeocodificacao(
-                new GoogleMapsProperties("chave-teste", null, URL, null, null), builder);
+                new GoogleMapsProperties("chave-teste", null, URL, null, null, null), builder);
     }
 
     @Test
@@ -75,7 +75,7 @@ class GoogleGeocodingServicoDeGeocodificacaoTest {
         servidor.verify();
 
         GoogleGeocodingServicoDeGeocodificacao semChave = new GoogleGeocodingServicoDeGeocodificacao(
-                new GoogleMapsProperties(null, null, URL, null, null), RestClient.builder());
+                new GoogleMapsProperties(null, null, URL, null, null, null), RestClient.builder());
         assertTrue(semChave.geocodificar("Av. Paulista, 1000").isEmpty());
     }
 }

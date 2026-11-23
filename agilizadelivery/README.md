@@ -50,6 +50,16 @@ O DVP não define fuso. As datas da API são locais, sem fuso (`2026-11-22T21:30
 
 Sem `GOOGLE_MAPS_API_KEY`, a distância loja → cliente é a linha reta (Haversine) × 1,3, com 2 casas. O log avisa ao subir: `GOOGLE_MAPS_API_KEY ausente: distância em linha reta (PROVISÓRIO, D009)`. Uma entrega sem coordenada continua indo para revisão (SEM_COORDENADA). Com a chave definida, vale a Routes API e, em falha, SEM_DISTANCIA (DVP 1.5.5).
 
+## Rota de moto (D013)
+
+Com `GOOGLE_MAPS_API_KEY`, a distância é a do percurso viário da **moto** (DVP 1.5.5, passo 1): a Routes API recebe `"travelMode": "TWO_WHEELER"`.
+
+- Propriedade `agiliza.maps.modo-viagem` (`AGILIZA_MAPS_MODO_VIAGEM`): `TWO_WHEELER` (padrão) ou `DRIVE`. Outro valor impede a subida.
+- Onde o Google não tem rota de moto para o trecho, o backend tenta **uma vez** com `DRIVE` e usa esse km. Isso vale para resposta sem rota e para HTTP 400 (modo indisponível na região).
+- Chave recusada (401/403), cota (429), erro do Google (5xx) e timeout não têm reserva, porque a segunda chamada falharia igual. A entrega vai para revisão (SEM_DISTANCIA).
+- O log diz o modo usado, sem coordenadas do cliente: `Routes API: distancia calculada com travelMode TWO_WHEELER.`, ou `... sem rota com travelMode TWO_WHEELER; tentando DRIVE.` e `... com travelMode DRIVE (reserva).`
+- Sem chave, nada disso roda: vale a linha reta da seção anterior.
+
 ## Saúde e falta de memória
 
 `GET /actuator/health` é público, não mostra detalhes e consulta uma tabela: responde 503 `DOWN` com o banco fechado ou com o esquema perdido. Com o banco fora, a API responde 503 no `ApiErrorResponse`.

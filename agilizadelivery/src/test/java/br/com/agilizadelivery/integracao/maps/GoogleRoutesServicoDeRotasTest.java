@@ -38,17 +38,17 @@ class GoogleRoutesServicoDeRotasTest {
         RestClient.Builder builder = RestClient.builder();
         servidor = MockRestServiceServer.bindTo(builder).build();
         servico = new GoogleRoutesServicoDeRotas(
-                new GoogleMapsProperties("chave-teste", URL, null, Duration.ofSeconds(1), null), builder);
+                new GoogleMapsProperties("chave-teste", URL, null, Duration.ofSeconds(1), null, null), builder);
     }
 
     @Test
-    @DisplayName("Deve consultar a rota viária loja -> cliente e converter metros em km")
+    @DisplayName("Deve consultar a rota viária de moto loja -> cliente e converter metros em km")
     void deveCalcularDistancia() {
         servidor.expect(requestTo(URL))
                 .andExpect(method(HttpMethod.POST))
                 .andExpect(header("X-Goog-Api-Key", "chave-teste"))
                 .andExpect(header("X-Goog-FieldMask", GoogleRoutesServicoDeRotas.FIELD_MASK))
-                .andExpect(jsonPath("$.travelMode").value("DRIVE"))
+                .andExpect(jsonPath("$.travelMode").value("TWO_WHEELER"))
                 .andExpect(jsonPath("$.origin.location.latLng.latitude").value(-23.55052))
                 .andExpect(jsonPath("$.destination.location.latLng.longitude").value(-46.6559))
                 .andExpect(jsonPath("$.intermediates").doesNotExist())
@@ -59,14 +59,21 @@ class GoogleRoutesServicoDeRotasTest {
     }
 
     @Test
-    @DisplayName("Deve devolver vazio em erro HTTP ou resposta sem rota")
+    @DisplayName("Deve devolver vazio em erro HTTP ou resposta sem rota, de moto e de carro")
     void deveDevolverVazioEmFalha() {
         servidor.expect(requestTo(URL)).andRespond(withServerError());
         assertTrue(servico.distanciaKm(loja, cliente).isEmpty());
+        servidor.verify();
 
         servidor.reset();
-        servidor.expect(requestTo(URL)).andRespond(withSuccess("{}", MediaType.APPLICATION_JSON));
+        servidor.expect(requestTo(URL))
+                .andExpect(jsonPath("$.travelMode").value("TWO_WHEELER"))
+                .andRespond(withSuccess("{}", MediaType.APPLICATION_JSON));
+        servidor.expect(requestTo(URL))
+                .andExpect(jsonPath("$.travelMode").value("DRIVE"))
+                .andRespond(withSuccess("{}", MediaType.APPLICATION_JSON));
         assertTrue(servico.distanciaKm(loja, cliente).isEmpty());
+        servidor.verify();
     }
 
     @Test
@@ -79,7 +86,7 @@ class GoogleRoutesServicoDeRotasTest {
         RestClient.Builder builder = RestClient.builder();
         MockRestServiceServer semChamadas = MockRestServiceServer.bindTo(builder).build();
         GoogleRoutesServicoDeRotas semChave = new GoogleRoutesServicoDeRotas(
-                new GoogleMapsProperties(" ", URL, null, null, null), builder);
+                new GoogleMapsProperties(" ", URL, null, null, null, null), builder);
         assertTrue(semChave.distanciaKm(loja, cliente).isEmpty());
         semChamadas.verify();
     }

@@ -29,6 +29,6 @@ class IntegracaoConfigTest {
     }
 
     private static GoogleMapsProperties propriedades(String chave) {
-        return new GoogleMapsProperties(chave, null, null, Duration.ofSeconds(1), 10);
+        return new GoogleMapsProperties(chave, null, null, Duration.ofSeconds(1), 10, null);
     }
 }

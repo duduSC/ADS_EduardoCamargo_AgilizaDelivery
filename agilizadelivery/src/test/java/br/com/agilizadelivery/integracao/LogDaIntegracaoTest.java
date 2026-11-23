@@ -70,7 +70,7 @@ class LogDaIntegracaoTest {
     @DisplayName("Falha de rede no geocoding não registra a chave nem o endereço do cliente")
     void chaveForaDoLog(CapturedOutput saida) {
         GoogleMapsProperties propriedades = new GoogleMapsProperties("chave-secreta-do-google", null,
-                "http://127.0.0.1:1/geocode", Duration.ofSeconds(1), 10);
+                "http://127.0.0.1:1/geocode", Duration.ofSeconds(1), 10, null);
 
         new GoogleGeocodingServicoDeGeocodificacao(propriedades, RestClient.builder())
                 .geocodificar("Rua do Cliente Sigiloso, 10");
