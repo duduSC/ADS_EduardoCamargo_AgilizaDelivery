@@ -10,6 +10,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.UUID;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -260,13 +261,32 @@ class RelatorioControllerTest {
                     .andExpect(jsonPath("$.porEntregador[0].nome", is("Ana Souza")));
         }
 
-        @Test
+        @ParameterizedTest
+        @ValueSource(strings = { "2026-02-30", "2026-13-01", "hoje", "20/11/2026" })
         @DisplayName("Data inválida: 400 PARAMETRO_INVALIDO")
-        void dataInvalida() throws Exception {
-            mockMvc.perform(get("/api/relatorios/dia").param("data", "20/11/2026")
+        void dataInvalida(String data) throws Exception {
+            mockMvc.perform(get("/api/relatorios/dia").param("data", data)
                             .header(HttpHeaders.AUTHORIZATION, cenario.bearer(operador)))
                     .andExpect(status().isBadRequest())
                     .andExpect(jsonPath("$.codigo", is("PARAMETRO_INVALIDO")));
+        }
+
+        @ParameterizedTest
+        @ValueSource(strings = { "pt-BR", "en-US" })
+        @DisplayName("Só AAAA-MM-DD, qualquer que seja o idioma do cliente (D013)")
+        void soIsoEmQualquerIdioma(String idioma) throws Exception {
+            for (String data : List.of("20/11/2026", "20/11/26", "11/20/26")) {
+                mockMvc.perform(get("/api/relatorios/dia").param("data", data)
+                                .header(HttpHeaders.ACCEPT_LANGUAGE, idioma)
+                                .header(HttpHeaders.AUTHORIZATION, cenario.bearer(operador)))
+                        .andExpect(status().isBadRequest())
+                        .andExpect(jsonPath("$.codigo", is("PARAMETRO_INVALIDO")));
+            }
+            mockMvc.perform(get("/api/relatorios/dia").param("data", "2026-11-20")
+                            .header(HttpHeaders.ACCEPT_LANGUAGE, idioma)
+                            .header(HttpHeaders.AUTHORIZATION, cenario.bearer(operador)))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.data", is("2026-11-20")));
         }
     }
 

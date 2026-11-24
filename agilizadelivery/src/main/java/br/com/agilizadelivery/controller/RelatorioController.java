@@ -2,6 +2,7 @@ package br.com.agilizadelivery.controller;
 
 import java.time.LocalDate;
 
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -33,11 +34,15 @@ public class RelatorioController {
         this.relatorioService = relatorioService;
     }
 
-    /** Sem data, vale o dia de hoje em Sao Paulo. */
+    /**
+     * data no formato AAAA-MM-DD (D013); sem data, vale o dia de hoje em Sao
+     * Paulo. So o ISO: sem a anotacao, o Spring tentaria antes o formato curto
+     * do idioma do cliente (20/11/2026 em pt-BR, 11/20/26 em en-US).
+     */
     @GetMapping("/dia")
     public RelatorioDoDiaResponse dia(
             @AuthenticationPrincipal UsuarioLogado logado,
-            @RequestParam(required = false) LocalDate data) {
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate data) {
         return relatorioService.doDia(
                 logado.estabelecimentoObrigatorio(), data == null ? HorarioLocal.hoje() : data);
     }
