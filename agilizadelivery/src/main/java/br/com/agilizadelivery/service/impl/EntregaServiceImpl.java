@@ -7,6 +7,7 @@ import java.util.UUID;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import br.com.agilizadelivery.dto.CoordenadaDto;
 import br.com.agilizadelivery.dto.DtoMapper;
@@ -30,9 +31,12 @@ import br.com.agilizadelivery.service.support.BuscadorTenant;
 import br.com.agilizadelivery.service.support.CalculadoraRepasse;
 import br.com.agilizadelivery.service.support.Coordenadas;
 import br.com.agilizadelivery.service.support.EncerramentoLote;
+import br.com.agilizadelivery.service.support.LocalizacaoEntrega.Posicao;
 import br.com.agilizadelivery.service.support.LocalizacaoEntrega;
 import br.com.agilizadelivery.service.support.PoliticaCorrecao;
 import br.com.agilizadelivery.service.support.TransicaoEntrega;
+import br.com.agilizadelivery.tempo.HorarioLocal;
+import br.com.agilizadelivery.websocket.PublicadorTempoReal;
 
 /**
  * Ciclo de vida da entrega (UC01, UC02, UC08) e do seu repasse (DVP 1.5.5).
@@ -41,8 +45,11 @@ import br.com.agilizadelivery.service.support.TransicaoEntrega;
  * de estados e grava o historico. O despacho e a devolucao, por mexerem
  * no lote, ficam no LoteEntregaService.
  */
+/*
+ * Sem @Transactional na classe: criarAvulsa e ajustarCoordenada consultam o
+ * mapa antes de abrir a transacao.
+ */
 @Service
-@Transactional(readOnly = true)
 public class EntregaServiceImpl implements EntregaService {
 
     private static final int TAMANHO_MOTIVO = 100;
@@ -55,6 +62,8 @@ public class EntregaServiceImpl implements EntregaService {
     private final EncerramentoLote encerramentoLote;
     private final PoliticaCorrecao politicaCorrecao;
     private final AjusteRepasse ajusteRepasse;
+    private final PublicadorTempoReal publicador;
+    private final TransactionTemplate transacao;
 
     public EntregaServiceImpl(
             EntregaRepository repository,
@@ -64,7 +73,9 @@ public class EntregaServiceImpl implements EntregaService {
             TransicaoEntrega transicao,
             EncerramentoLote encerramentoLote,
             PoliticaCorrecao politicaCorrecao,
-            AjusteRepasse ajusteRepasse) {
+            AjusteRepasse ajusteRepasse,
+            PublicadorTempoReal publicador,
+            TransactionTemplate transacao) {
         this.repository = repository;
         this.buscador = buscador;
         this.localizacao = localizacao;
@@ -73,11 +84,12 @@ public class EntregaServiceImpl implements EntregaService {
         this.encerramentoLote = encerramentoLote;
         this.politicaCorrecao = politicaCorrecao;
         this.ajusteRepasse = ajusteRepasse;
+        this.publicador = publicador;
+        this.transacao = transacao;
     }
 
     /** Pedido avulso, digitado pelo operador (UC01 A2). */
     @Override
-    @Transactional
     public EntregaResponse criarAvulsa(UUID estabelecimentoId, CriarEntregaAvulsaRequest request) {
         Entrega entrega = new Entrega();
         entrega.setEstabelecimento(buscador.estabelecimentoAtivo(estabelecimentoId));
@@ -97,31 +109,49 @@ public class EntregaServiceImpl implements EntregaService {
         entrega.setStatus(StatusEntrega.AGUARDANDO_DESPACHO);
         entrega.setPendenteRevisao(false);
 
-        localizacao.localizar(entrega);
-        Entrega salva = repository.save(entrega);
-        transicao.registrarCriacao(salva, null);
-        return DtoMapper.toResponse(salva);
+        Posicao posicao = localizacao.consultar(entrega.getCoordenada(), entrega.getEnderecoCompleto(),
+                entrega.getEstabelecimento().getCoordenada());
+        return transacao.execute(status -> {
+            localizacao.aplicar(entrega, posicao);
+            Entrega salva = repository.save(entrega);
+            transicao.registrarCriacao(salva, null);
+            EntregaResponse resposta = DtoMapper.toResponse(salva);
+            publicador.publicarEntrega(estabelecimentoId, "CRIADA", resposta);
+            return resposta;
+        });
     }
 
     @Override
+    @Transactional(readOnly = true)
     public EntregaResponse buscarPorId(UUID estabelecimentoId, UUID entregaId) {
         return DtoMapper.toResponse(buscar(estabelecimentoId, entregaId));
     }
 
     @Override
+    @Transactional(readOnly = true)
     public List<EntregaResponse> listarPorEstabelecimentoEStatus(UUID estabelecimentoId, StatusEntrega status) {
         return paraResposta(repository.findByEstabelecimentoIdAndStatusOrderByCriadoEmAsc(estabelecimentoId, status));
     }
 
     /** Mapa de pendentes: sem revisao em aberto (HU01). */
     @Override
+    @Transactional(readOnly = true)
     public List<EntregaResponse> listarPendentesDeDespacho(UUID estabelecimentoId) {
         return paraResposta(repository.findByEstabelecimentoIdAndStatusAndPendenteRevisaoFalseOrderByCriadoEmAsc(
                 estabelecimentoId, StatusEntrega.AGUARDANDO_DESPACHO));
     }
 
+    /** Fila de revisao do estabelecimento (HU01/HU03, S004). */
+    @Override
+    @Transactional(readOnly = true)
+    public List<EntregaResponse> listarPendentesDeRevisao(UUID estabelecimentoId) {
+        return paraResposta(repository.findByEstabelecimentoIdAndPendenteRevisaoTrueOrderByCriadoEmAsc(
+                estabelecimentoId));
+    }
+
     /** Extrato do entregador no periodo (UC08). */
     @Override
+    @Transactional(readOnly = true)
     public List<EntregaResponse> listarDoMotoboy(
             UUID estabelecimentoId,
             UUID motoboyId,
@@ -140,12 +170,13 @@ public class EntregaServiceImpl implements EntregaService {
     @Override
     @Transactional
     public EntregaResponse marcarProntaParaDespacho(UUID estabelecimentoId, UUID entregaId, LocalDateTime prontaEm) {
+        buscador.travarLoja(estabelecimentoId);
         Entrega entrega = buscar(estabelecimentoId, entregaId);
         if (entrega.getStatus() != StatusEntrega.AGUARDANDO_DESPACHO) {
             throw new TransicaoEstadoInvalidaException(
                     "Somente entregas aguardando despacho podem ser marcadas como prontas.");
         }
-        entrega.setProntoParaDespachoEm(prontaEm == null ? LocalDateTime.now() : prontaEm);
+        entrega.setProntoParaDespachoEm(prontaEm == null ? HorarioLocal.agora() : prontaEm);
         return DtoMapper.toResponse(repository.save(entrega));
     }
 
@@ -160,6 +191,7 @@ public class EntregaServiceImpl implements EntregaService {
             UUID entregaId,
             UUID usuarioId,
             AlterarStatusEntregaRequest request) {
+        buscador.travarLoja(estabelecimentoId);
         StatusEntrega destino = request.status();
         if (destino != StatusEntrega.ENTREGUE && destino != StatusEntrega.FALHA) {
             throw new TransicaoEstadoInvalidaException(
@@ -174,7 +206,7 @@ public class EntregaServiceImpl implements EntregaService {
         Usuario autor = buscador.usuario(estabelecimentoId, usuarioId);
         exigirEntregadorDoLote(entrega, autor);
 
-        LocalDateTime ocorridoEm = request.ocorridoEm() == null ? LocalDateTime.now() : request.ocorridoEm();
+        LocalDateTime ocorridoEm = request.ocorridoEm() == null ? HorarioLocal.agora() : request.ocorridoEm();
         transicao.transitar(entrega, destino, autor, coordenadaInformada(request.coordenada()), ocorridoEm);
         entrega.setMotivoFalha(destino == StatusEntrega.FALHA ? request.motivoFalha().trim() : null);
         entrega.setFinalizadaEm(ocorridoEm);
@@ -182,7 +214,9 @@ public class EntregaServiceImpl implements EntregaService {
 
         Entrega salva = repository.save(entrega);
         encerramentoLote.avaliar(salva.getLote());
-        return DtoMapper.toResponse(salva);
+        EntregaResponse resposta = DtoMapper.toResponse(salva);
+        publicador.publicarEntrega(estabelecimentoId, "STATUS_ALTERADO", resposta);
+        return resposta;
     }
 
     /**
@@ -192,6 +226,7 @@ public class EntregaServiceImpl implements EntregaService {
     @Override
     @Transactional
     public EntregaResponse cancelar(UUID estabelecimentoId, UUID entregaId, UUID usuarioId, String motivo) {
+        buscador.travarLoja(estabelecimentoId);
         if (motivo == null || motivo.isBlank()) {
             throw new RegraDeNegocioException("O motivo do cancelamento é obrigatório.");
         }
@@ -200,7 +235,7 @@ public class EntregaServiceImpl implements EntregaService {
                 estabelecimentoId, usuarioId, PerfilUsuario.OPERADOR, PerfilUsuario.ADMIN_RESTAURANTE);
 
         boolean saiuDaLoja = entrega.getStatus() == StatusEntrega.EM_ROTA;
-        transicao.transitar(entrega, StatusEntrega.CANCELADA, autor, null, LocalDateTime.now());
+        transicao.transitar(entrega, StatusEntrega.CANCELADA, autor, null, HorarioLocal.agora());
         if (saiuDaLoja) {
             calculadoraRepasse.aplicarFaixaVigente(entrega);
         } else {
@@ -209,40 +244,54 @@ public class EntregaServiceImpl implements EntregaService {
             entrega.setMotivoRevisao(null);
         }
         entrega.setMotivoFalha(limitar(motivo.trim()));
-        entrega.setFinalizadaEm(LocalDateTime.now());
+        entrega.setFinalizadaEm(HorarioLocal.agora());
 
         Entrega salva = repository.save(entrega);
         encerramentoLote.avaliar(salva.getLote());
-        return DtoMapper.toResponse(salva);
+        EntregaResponse resposta = DtoMapper.toResponse(salva);
+        publicador.publicarEntrega(estabelecimentoId, "STATUS_ALTERADO", resposta);
+        return resposta;
     }
 
-    /** Reposicionamento manual do pino (UC01 A1, risco R04). */
+    /**
+     * Reposicionamento manual do pino (UC01 A1, risco R04): le, consulta o
+     * mapa sem transacao e so entao trava a loja e confere de novo.
+     */
     @Override
-    @Transactional
     public EntregaResponse ajustarCoordenada(
             UUID estabelecimentoId,
             UUID entregaId,
             BigDecimal latitude,
             BigDecimal longitude,
             UUID usuarioId) {
-        Entrega entrega = buscar(estabelecimentoId, entregaId);
-        buscador.usuarioComPerfil(
-                estabelecimentoId, usuarioId, PerfilUsuario.OPERADOR, PerfilUsuario.ADMIN_RESTAURANTE);
-        if (entrega.emEstadoFinal()) {
-            throw new RegraDeNegocioException("Não é possível reposicionar uma entrega já finalizada.");
-        }
+        Coordenada origem = transacao.execute(status -> {
+            Entrega entrega = buscar(estabelecimentoId, entregaId);
+            buscador.usuarioComPerfil(
+                    estabelecimentoId, usuarioId, PerfilUsuario.OPERADOR, PerfilUsuario.ADMIN_RESTAURANTE);
+            exigirReposicionavel(entrega);
+            return entrega.getEstabelecimento().getCoordenada();
+        });
 
-        entrega.setCoordenada(Coordenadas.validada(latitude, longitude));
-        localizacao.localizar(entrega);
-        Entrega salva = repository.save(entrega);
-        encerramentoLote.atualizarTotal(salva.getLote());
-        return DtoMapper.toResponse(salva);
+        Coordenada pino = Coordenadas.validada(latitude, longitude);
+        Posicao posicao = localizacao.consultar(pino, null, origem);
+
+        return transacao.execute(status -> {
+            buscador.travarLoja(estabelecimentoId);
+            Entrega entrega = buscar(estabelecimentoId, entregaId);
+            exigirReposicionavel(entrega);
+            entrega.setCoordenada(pino);
+            localizacao.aplicar(entrega, posicao);
+            Entrega salva = repository.save(entrega);
+            encerramentoLote.atualizarTotal(salva.getLote());
+            return DtoMapper.toResponse(salva);
+        });
     }
 
     /** Contestacao do valor pelo entregador (UC08 A1, E1 e E2). */
     @Override
     @Transactional
     public EntregaResponse contestar(UUID estabelecimentoId, UUID entregaId, UUID motoboyId) {
+        buscador.travarLoja(estabelecimentoId);
         Entrega entrega = buscar(estabelecimentoId, entregaId);
         buscador.motoboy(estabelecimentoId, motoboyId);
         if (entrega.getLote() == null || !motoboyId.equals(entrega.getLote().getMotoboy().getId())) {
@@ -276,6 +325,7 @@ public class EntregaServiceImpl implements EntregaService {
             UUID usuarioId,
             BigDecimal valorRepasse,
             String motivo) {
+        buscador.travarLoja(estabelecimentoId);
         if (motivo == null || motivo.isBlank()) {
             throw new RegraDeNegocioException("O motivo da resolução da revisão é obrigatório.");
         }
@@ -298,6 +348,12 @@ public class EntregaServiceImpl implements EntregaService {
         entrega.setPendenteRevisao(false);
         entrega.setMotivoRevisao(null);
         return DtoMapper.toResponse(repository.save(entrega));
+    }
+
+    private static void exigirReposicionavel(Entrega entrega) {
+        if (entrega.emEstadoFinal()) {
+            throw new RegraDeNegocioException("Não é possível reposicionar uma entrega já finalizada.");
+        }
     }
 
     private Entrega buscar(UUID estabelecimentoId, UUID entregaId) {

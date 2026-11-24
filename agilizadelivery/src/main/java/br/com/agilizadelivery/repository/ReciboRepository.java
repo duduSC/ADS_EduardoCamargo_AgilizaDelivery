@@ -20,12 +20,6 @@ import br.com.agilizadelivery.entity.model.enums.StatusRecibo;
 @Repository
 public interface ReciboRepository extends JpaRepository<Recibo, UUID> {
 
-    /** Recibos de um periodo de operacao, para consolidar o fechamento. */
-    List<Recibo> findByCaixaId(UUID caixaId);
-
-    /** Recibos de um entregador por situacao. */
-    List<Recibo> findByMotoboyIdAndStatus(UUID motoboyId, StatusRecibo status);
-
     /** Recibos de uma loja em um dia. */
     List<Recibo> findByEstabelecimentoIdAndDataReferencia(UUID estabelecimentoId, LocalDate dataReferencia);
 
@@ -37,4 +31,18 @@ public interface ReciboRepository extends JpaRepository<Recibo, UUID> {
             UUID estabelecimentoId,
             UUID motoboyId,
             StatusRecibo status);
+
+    /** Recibos de um entregador, independente de status. */
+    List<Recibo> findByEstabelecimentoIdAndMotoboyId(UUID estabelecimentoId, UUID motoboyId);
+
+    /**
+     * Recibos do entregador para o aplicativo, do mais recente para o mais
+     * antigo (D013).
+     *
+     * PROVISORIO (a D013 nao fixa a chave): mais recente e o dia do caixa
+     * (dataReferencia), depois a emissao (criadoEm); o id desempata, para a
+     * ordem nunca variar entre duas consultas.
+     */
+    List<Recibo> findByEstabelecimentoIdAndMotoboyIdOrderByDataReferenciaDescCriadoEmDescIdDesc(
+            UUID estabelecimentoId, UUID motoboyId);
 }

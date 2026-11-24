@@ -2,7 +2,6 @@ package br.com.agilizadelivery.service.impl;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
 
@@ -28,6 +27,7 @@ import br.com.agilizadelivery.repository.CaixaRepository;
 import br.com.agilizadelivery.repository.ReciboRepository;
 import br.com.agilizadelivery.service.CaixaService;
 import br.com.agilizadelivery.service.support.BuscadorTenant;
+import br.com.agilizadelivery.tempo.HorarioLocal;
 import lombok.extern.slf4j.Slf4j;
 
 @Service
@@ -51,6 +51,7 @@ public class CaixaServiceImpl implements CaixaService {
     @Override
     @Transactional
     public CaixaResponse abrirCaixa(UUID estabelecimentoId, AbrirCaixaRequest request) {
+        buscador.travarLoja(estabelecimentoId);
         LocalDate dataReferencia = request.dataReferencia();
         log.info("Tentativa de abertura de caixa para estabelecimento '{}' na data '{}'",
                 estabelecimentoId, dataReferencia);
@@ -63,7 +64,7 @@ public class CaixaServiceImpl implements CaixaService {
         Caixa caixa = new Caixa();
         caixa.setEstabelecimento(estabelecimento);
         caixa.setDataReferencia(dataReferencia);
-        caixa.setAbertoEm(LocalDateTime.now());
+        caixa.setAbertoEm(HorarioLocal.agora());
         caixa.setStatus(StatusCaixa.ABERTO);
         Caixa salvo = caixaRepository.save(caixa);
         log.info("Caixa '{}' aberto com sucesso para o estabelecimento '{}'", salvo.getId(), estabelecimentoId);
@@ -95,6 +96,7 @@ public class CaixaServiceImpl implements CaixaService {
     @Override
     @Transactional
     public CaixaResponse fecharCaixa(UUID estabelecimentoId, UUID caixaId, UUID usuarioFechamentoId) {
+        buscador.travarLoja(estabelecimentoId);
         log.info("Fechando caixa '{}' pelo usuário '{}'", caixaId, usuarioFechamentoId);
 
         Caixa caixa = buscar(estabelecimentoId, caixaId);
@@ -114,7 +116,7 @@ public class CaixaServiceImpl implements CaixaService {
                 .map(Recibo::getValorTotal)
                 .reduce(BigDecimal.ZERO, BigDecimal::add));
         caixa.setStatus(StatusCaixa.FECHADO);
-        caixa.setFechadoEm(LocalDateTime.now());
+        caixa.setFechadoEm(HorarioLocal.agora());
         caixa.setUsuarioFechamento(usuarioFechamento);
         Caixa fechado = caixaRepository.save(caixa);
         log.info("Caixa '{}' fechado com sucesso", caixaId);
@@ -129,6 +131,7 @@ public class CaixaServiceImpl implements CaixaService {
             UUID caixaId,
             UUID usuarioReaberturaId,
             String motivoReabertura) {
+        buscador.travarLoja(estabelecimentoId);
         log.info("Solicitação de reabertura do caixa '{}' pelo usuário '{}'", caixaId, usuarioReaberturaId);
 
         Caixa caixa = buscar(estabelecimentoId, caixaId);
@@ -142,12 +145,22 @@ public class CaixaServiceImpl implements CaixaService {
                 estabelecimentoId, usuarioReaberturaId, PerfilUsuario.ADMIN_RESTAURANTE);
 
         caixa.setStatus(StatusCaixa.REABERTO);
-        caixa.setReabertoEm(LocalDateTime.now());
+        caixa.setReabertoEm(HorarioLocal.agora());
         caixa.setUsuarioReabertura(usuarioReabertura);
         caixa.setMotivoReabertura(motivoReabertura.trim());
         Caixa reaberto = caixaRepository.save(caixa);
         log.info("Caixa '{}' reaberto com sucesso", caixaId);
         return DtoMapper.toResponse(reaberto);
+    }
+
+    @Override
+    public List<CaixaResponse> listarPorPeriodo(UUID estabelecimentoId, LocalDate dataInicio, LocalDate dataFim) {
+        return caixaRepository
+                .findByEstabelecimentoIdAndDataReferenciaBetweenOrderByDataReferenciaDesc(
+                        estabelecimentoId, dataInicio, dataFim)
+                .stream()
+                .map(DtoMapper::toResponse)
+                .toList();
     }
 
     private Caixa buscar(UUID estabelecimentoId, UUID caixaId) {

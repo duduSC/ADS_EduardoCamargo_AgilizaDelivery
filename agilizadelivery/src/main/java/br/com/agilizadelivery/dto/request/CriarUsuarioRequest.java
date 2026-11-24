@@ -11,4 +11,11 @@ public record CriarUsuarioRequest(
         @NotBlank @Email @Size(max = 150) String loginEmail,
         @NotBlank @Size(min = 8, max = 72) String senha,
         @NotNull PerfilUsuario perfil) {
+
+    /** A senha nunca aparece em log (Constituicao 6.2). */
+    @Override
+    public String toString() {
+        return "CriarUsuarioRequest[nome=" + nome + ", loginEmail=" + loginEmail + ", senha=***, perfil=" + perfil
+                + "]";
+    }
 }

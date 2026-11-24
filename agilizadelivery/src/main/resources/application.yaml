@@ -8,15 +8,76 @@ spring:
     active: h2
   jpa:
     open-in-view: false
+  datasource:
+    hikari:
+      # PROVISORIO (T014): sem conexao em 10 s a resposta e 503 (o padrao e esperar 30 s)
+      connection-timeout: 10000
+  # Explicitos porque o devtools liga os quatro por padrao (Constituicao 6.1 a 6.4).
+  mvc:
+    # ligado, escreve no log o valor rejeitado pela validacao: CPF, senha, telefone
+    log-resolved-exception: false
+  web:
+    error:
+      include-stacktrace: never
+      include-message: never
+      include-binding-errors: never
+
+logging:
+  level:
+    # a mensagem de erro SQL do Hibernate traz os valores da linha
+    org.hibernate.orm.jdbc.error: "off"
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+  endpoint:
+    health:
+      show-details: never
+      show-components: never
 
 agiliza:
+  http:
+    # PROVISORIO (T014): corpo maior responde 413.
+    tamanho-maximo-corpo: 1MB
   maps:
     api-key: ${GOOGLE_MAPS_API_KEY:}
     routes-url: https://routes.googleapis.com/directions/v2:computeRoutes
     geocoding-url: https://maps.googleapis.com/maps/api/geocode/json
     timeout: 5s
     cache-tamanho: 1000
+    # travelMode da Routes API: TWO_WHEELER (moto, D013) ou DRIVE (carro). Sem rota de moto, tenta DRIVE.
+    modo-viagem: ${AGILIZA_MAPS_MODO_VIAGEM:TWO_WHEELER}
   seguranca:
     cpf:
       chave-cifra: ${AGILIZA_CPF_CHAVE_CIFRA:}
       chave-hash: ${AGILIZA_CPF_CHAVE_HASH:}
+  # JWT (D002). Sem JWT_SECRET a aplicacao nao sobe.
+  jwt:
+    segredo: ${JWT_SECRET:}
+    access-ttl: ${JWT_ACCESS_TTL:3h}
+    # PROVISORIO: refresh token fora do DVP 3.1.
+    refresh-ttl: ${JWT_REFRESH_TTL:30d}
+  # Origens do navegador aceitas, separadas por virgula. Vazio: nenhuma.
+  cors:
+    origens-permitidas: ${CORS_ORIGENS:}
+  # Worker de integracao com provedores de pedidos (DVP 1.5.6, T011).
+  # Desligado aqui e no perfil postgres; ligado no perfil h2.
+  integracao:
+    worker:
+      habilitado: ${AGILIZA_WORKER:false}
+      intervalo: 30s
+      # Recuo exponencial do RNF04: recuo-inicial, 2x, 4x... ate max-tentativas.
+      recuo-inicial: 200ms
+      max-tentativas: 5
+    simulador:
+      max-por-ciclo: 2
+      # Para de gerar quando a loja tiver este numero de entregas aguardando.
+      limite-aguardando: 15
+  # Carga de demonstracao (D009, T010). SO DESENVOLVIMENTO: desligada aqui
+  # e no perfil postgres; ligada no perfil h2. AGILIZA_DEMO=true liga.
+  demo:
+    carga-inicial: ${AGILIZA_DEMO:false}
+    # Senha comum dos usuarios de demonstracao (gravada so como hash BCrypt).
+    senha: ${AGILIZA_DEMO_SENHA:agiliza123}

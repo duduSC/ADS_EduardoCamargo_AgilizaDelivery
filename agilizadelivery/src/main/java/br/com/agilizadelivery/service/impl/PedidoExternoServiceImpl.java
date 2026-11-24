@@ -1,6 +1,5 @@
 package br.com.agilizadelivery.service.impl;
 
-import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
 
@@ -11,19 +10,21 @@ import br.com.agilizadelivery.dto.DtoMapper;
 import br.com.agilizadelivery.dto.response.PedidoExternoResponse;
 import br.com.agilizadelivery.entity.model.ItemPedido;
 import br.com.agilizadelivery.entity.model.PedidoExterno;
-import br.com.agilizadelivery.entity.model.enums.Provedor;
 import br.com.agilizadelivery.exception.EntidadeNaoEncontradaException;
 import br.com.agilizadelivery.exception.PedidoJaImportadoException;
 import br.com.agilizadelivery.exception.RegraDeNegocioException;
 import br.com.agilizadelivery.repository.PedidoExternoRepository;
 import br.com.agilizadelivery.service.PedidoExternoService;
 import br.com.agilizadelivery.service.support.BuscadorTenant;
+import br.com.agilizadelivery.service.support.Provedores;
+import br.com.agilizadelivery.tempo.HorarioLocal;
 
 /**
  * Persistencia dos pedidos recebidos do provedor (HU03, RNF13).
  *
  * O par (provedor, idExterno) e a chave de idempotencia: um pedido
- * nunca e importado duas vezes.
+ * nunca e importado duas vezes. O provedor e normalizado (Provedores)
+ * antes da verificacao, para "ifood" e "IFOOD" serem a mesma chave.
  */
 @Service
 @Transactional(readOnly = true)
@@ -40,8 +41,9 @@ public class PedidoExternoServiceImpl implements PedidoExternoService {
     @Override
     @Transactional
     public PedidoExternoResponse importar(UUID estabelecimentoId, PedidoExterno pedido) {
+        pedido.setProvedor(Provedores.normalizar(pedido.getProvedor()));
         if (jaImportado(pedido.getProvedor(), pedido.getIdExterno())) {
-            throw new PedidoJaImportadoException(String.valueOf(pedido.getProvedor()), pedido.getIdExterno());
+            throw new PedidoJaImportadoException(pedido.getProvedor(), pedido.getIdExterno());
         }
         pedido.setEstabelecimento(buscador.estabelecimentoAtivo(estabelecimentoId));
         pedido.setProcessadoEm(null);
@@ -71,13 +73,13 @@ public class PedidoExternoServiceImpl implements PedidoExternoService {
         if (pedido.getProcessadoEm() != null) {
             throw new RegraDeNegocioException("O pedido já foi processado e convertido em entrega.");
         }
-        pedido.setProcessadoEm(LocalDateTime.now());
+        pedido.setProcessadoEm(HorarioLocal.agora());
         return DtoMapper.toResponse(repository.save(pedido));
     }
 
     @Override
-    public boolean jaImportado(Provedor provedor, String idExterno) {
-        return repository.existsByProvedorAndIdExterno(provedor, idExterno);
+    public boolean jaImportado(String provedor, String idExterno) {
+        return repository.existsByProvedorAndIdExterno(Provedores.normalizar(provedor), idExterno);
     }
 
     private PedidoExterno buscar(UUID estabelecimentoId, UUID pedidoExternoId) {

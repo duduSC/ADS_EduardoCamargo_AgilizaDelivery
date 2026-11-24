@@ -1,5 +1,8 @@
 package br.com.agilizadelivery.entity.model;
 
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
+
 import br.com.agilizadelivery.entity.model.base.EntidadeDoEstabelecimento;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -53,6 +56,7 @@ public class LoteEntrega extends EntidadeDoEstabelecimento {
 
     @NotNull
     @Enumerated(EnumType.STRING)
+    @JdbcTypeCode(SqlTypes.NAMED_ENUM)
     @Column(name = "status", nullable = false, length = 15)
     private StatusLote status = StatusLote.DESPACHADO;
 

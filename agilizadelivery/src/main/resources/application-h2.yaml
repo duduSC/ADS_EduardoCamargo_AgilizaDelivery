@@ -1,6 +1,7 @@
 spring:
     datasource:
-        url: jdbc:h2:mem:agiliza;MODE=PostgreSQL;DATABASE_TO_LOWER=TRUE;DB_CLOSE_DELAY=-1
+        # PROVISORIO (T014): LOCK_TIMEOUT de 10 s, como no postgres
+        url: jdbc:h2:mem:agiliza;MODE=PostgreSQL;DATABASE_TO_LOWER=TRUE;DB_CLOSE_DELAY=-1;LOCK_TIMEOUT=10000
         driver-class-name: org.h2.Driver
         username: adm
         password: adm
@@ -22,3 +23,12 @@ agiliza:
         cpf:
             chave-cifra: ${AGILIZA_CPF_CHAVE_CIFRA:K8asvQ7GEr6geRhYRo3ehKVzQEEgVE1WOFQ1DOSeUJ8=}
             chave-hash: ${AGILIZA_CPF_CHAVE_HASH:Iw/puxmDeVZohf/Q7Ll6GLvqjARxEFwf0JqsU3dyZvI=}
+    jwt:
+        segredo: ${JWT_SECRET:UQYEmGZe0cmQNCw5EA7y5LrOP10eB3PaBM2+jM7CwlGtoufVjl53W/hLXM8Mreve}
+    cors:
+        origens-permitidas: ${CORS_ORIGENS:http://localhost:5173}
+    demo:
+        carga-inicial: ${AGILIZA_DEMO:true}
+    integracao:
+        worker:
+            habilitado: ${AGILIZA_WORKER:true}

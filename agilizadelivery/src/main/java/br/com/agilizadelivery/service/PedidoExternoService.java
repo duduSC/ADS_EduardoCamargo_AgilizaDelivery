@@ -5,7 +5,6 @@ import java.util.UUID;
 
 import br.com.agilizadelivery.dto.response.PedidoExternoResponse;
 import br.com.agilizadelivery.entity.model.PedidoExterno;
-import br.com.agilizadelivery.entity.model.enums.Provedor;
 
 public interface PedidoExternoService {
 
@@ -17,5 +16,5 @@ public interface PedidoExternoService {
 
     PedidoExternoResponse marcarProcessado(UUID estabelecimentoId, UUID pedidoExternoId);
 
-    boolean jaImportado(Provedor provedor, String idExterno);
+    boolean jaImportado(String provedor, String idExterno);
 }

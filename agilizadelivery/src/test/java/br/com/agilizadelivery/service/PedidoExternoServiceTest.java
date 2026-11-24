@@ -12,7 +12,6 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -23,18 +22,22 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.http.HttpStatus;
 
 import br.com.agilizadelivery.dto.response.PedidoExternoResponse;
 import br.com.agilizadelivery.entity.model.Estabelecimento;
 import br.com.agilizadelivery.entity.model.ItemPedido;
 import br.com.agilizadelivery.entity.model.PedidoExterno;
-import br.com.agilizadelivery.entity.model.enums.Provedor;
 import br.com.agilizadelivery.exception.EntidadeNaoEncontradaException;
 import br.com.agilizadelivery.exception.PedidoJaImportadoException;
+import br.com.agilizadelivery.exception.ProvedorDesconhecidoException;
 import br.com.agilizadelivery.exception.RegraDeNegocioException;
+import br.com.agilizadelivery.exception.handler.CodigoErro;
 import br.com.agilizadelivery.repository.PedidoExternoRepository;
 import br.com.agilizadelivery.service.impl.PedidoExternoServiceImpl;
 import br.com.agilizadelivery.service.support.BuscadorTenant;
+import br.com.agilizadelivery.service.support.Provedores;
+import br.com.agilizadelivery.tempo.HorarioLocal;
 
 @ExtendWith(MockitoExtension.class)
 class PedidoExternoServiceTest {
@@ -55,7 +58,7 @@ class PedidoExternoServiceTest {
         estabelecimento = Fixtures.estabelecimento();
         pedido = new PedidoExterno();
         pedido.setId(UUID.randomUUID());
-        pedido.setProvedor(Provedor.IFOOD);
+        pedido.setProvedor(Provedores.IFOOD);
         pedido.setIdExterno("ifood-123");
         pedido.setNomeCliente("Cliente");
         pedido.setValorTotal(reais("59.90"));
@@ -70,7 +73,7 @@ class PedidoExternoServiceTest {
     @DisplayName("Deve importar o pedido vinculando loja e itens")
     void deveImportar() {
         pedido.getItens().getFirst().setPedidoExterno(null);
-        when(repository.existsByProvedorAndIdExterno(Provedor.IFOOD, "ifood-123")).thenReturn(false);
+        when(repository.existsByProvedorAndIdExterno(Provedores.IFOOD, "ifood-123")).thenReturn(false);
         when(buscador.estabelecimentoAtivo(estabelecimento.getId())).thenReturn(estabelecimento);
         when(repository.save(any(PedidoExterno.class))).then(returnsFirstArg());
 
@@ -84,7 +87,7 @@ class PedidoExternoServiceTest {
     @Test
     @DisplayName("Deve garantir a idempotência da importação (HU03)")
     void deveRecusarPedidoDuplicado() {
-        when(repository.existsByProvedorAndIdExterno(Provedor.IFOOD, "ifood-123")).thenReturn(true);
+        when(repository.existsByProvedorAndIdExterno(Provedores.IFOOD, "ifood-123")).thenReturn(true);
 
         assertThrows(PedidoJaImportadoException.class, () -> service.importar(estabelecimento.getId(), pedido));
         verify(repository, never()).save(any());
@@ -100,7 +103,7 @@ class PedidoExternoServiceTest {
 
         assertNotNull(service.marcarProcessado(estabelecimento.getId(), pedido.getId()).processadoEm());
 
-        pedido.setProcessadoEm(LocalDateTime.now());
+        pedido.setProcessadoEm(HorarioLocal.agora());
         assertThrows(RegraDeNegocioException.class, () ->
                 service.marcarProcessado(estabelecimento.getId(), pedido.getId()));
     }
@@ -113,12 +116,37 @@ class PedidoExternoServiceTest {
                 .thenReturn(Optional.of(pedido));
         when(repository.findByEstabelecimentoIdAndProcessadoEmIsNull(estabelecimento.getId()))
                 .thenReturn(List.of(pedido));
-        when(repository.existsByProvedorAndIdExterno(Provedor.SIMULADOR, "sim-1")).thenReturn(true);
+        when(repository.existsByProvedorAndIdExterno(Provedores.SIMULADOR, "sim-1")).thenReturn(true);
 
         assertEquals(pedido.getId(), service.buscarPorId(estabelecimento.getId(), pedido.getId()).id());
         assertEquals(1, service.listarNaoProcessados(estabelecimento.getId()).size());
-        assertTrue(service.jaImportado(Provedor.SIMULADOR, "sim-1"));
+        assertTrue(service.jaImportado(Provedores.SIMULADOR, "sim-1"));
         assertThrows(EntidadeNaoEncontradaException.class, () ->
                 service.buscarPorId(UUID.randomUUID(), pedido.getId()));
+    }
+
+    @Test
+    @DisplayName("Deve normalizar o provedor antes da chave de idempotência")
+    void deveNormalizarProvedorNaIdempotencia() {
+        pedido.setProvedor(" ifood ");
+        when(repository.existsByProvedorAndIdExterno(Provedores.IFOOD, "ifood-123")).thenReturn(true);
+
+        assertThrows(PedidoJaImportadoException.class, () -> service.importar(estabelecimento.getId(), pedido));
+        assertEquals(Provedores.IFOOD, pedido.getProvedor());
+        assertTrue(service.jaImportado("Ifood", "ifood-123"));
+    }
+
+    @Test
+    @DisplayName("Deve recusar provedor desconhecido com 400 DADOS_INVALIDOS")
+    void deveRecusarProvedorDesconhecido() {
+        pedido.setProvedor("RAPPI");
+
+        ProvedorDesconhecidoException erro = assertThrows(ProvedorDesconhecidoException.class,
+                () -> service.importar(estabelecimento.getId(), pedido));
+        assertEquals(HttpStatus.BAD_REQUEST, erro.getStatusHttp());
+        assertEquals(CodigoErro.DADOS_INVALIDOS, erro.getCodigoErro());
+        assertThrows(ProvedorDesconhecidoException.class, () -> service.jaImportado("RAPPI", "x"));
+        verify(repository, never()).save(any());
+        verify(repository, never()).existsByProvedorAndIdExterno(any(), any());
     }
 }

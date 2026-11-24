@@ -4,6 +4,7 @@ import java.time.LocalDateTime;
 
 import br.com.agilizadelivery.entity.model.enums.EtapaFalhaIntegracao;
 import br.com.agilizadelivery.entity.model.enums.StatusFalhaIntegracao;
+import br.com.agilizadelivery.tempo.HorarioLocal;
 import jakarta.persistence.Column;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
@@ -62,6 +63,7 @@ public class FalhaIntegracao {
 
     @NotNull
     @Enumerated(EnumType.STRING)
+    @JdbcTypeCode(SqlTypes.NAMED_ENUM)
     @Column(name = "etapa", nullable = false, length = 20)
     private EtapaFalhaIntegracao etapa;
 
@@ -82,6 +84,7 @@ public class FalhaIntegracao {
 
     @NotNull
     @Enumerated(EnumType.STRING)
+    @JdbcTypeCode(SqlTypes.NAMED_ENUM)
     @Column(name = "status", nullable = false, length = 12)
     private StatusFalhaIntegracao status = StatusFalhaIntegracao.PENDENTE;
 
@@ -94,7 +97,7 @@ public class FalhaIntegracao {
     @PrePersist
     protected void aoCriar() {
         if (this.ocorridoEm == null) {
-            this.ocorridoEm = LocalDateTime.now();
+            this.ocorridoEm = HorarioLocal.agora();
         }
     }
 }

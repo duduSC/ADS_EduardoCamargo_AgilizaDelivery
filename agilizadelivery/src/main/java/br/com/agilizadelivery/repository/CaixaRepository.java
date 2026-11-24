@@ -31,4 +31,8 @@ public interface CaixaRepository extends JpaRepository<Caixa, UUID> {
 
     /** Caixa de uma loja; recurso de outra loja nao e encontrado (HU13). */
     Optional<Caixa> findByIdAndEstabelecimentoId(UUID id, UUID estabelecimentoId);
+
+    /** Historico de caixas de uma loja em um intervalo de datas. */
+    List<Caixa> findByEstabelecimentoIdAndDataReferenciaBetweenOrderByDataReferenciaDesc(
+            UUID estabelecimentoId, LocalDate dataInicio, LocalDate dataFim);
 }

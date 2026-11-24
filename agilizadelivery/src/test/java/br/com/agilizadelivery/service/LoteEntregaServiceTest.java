@@ -69,6 +69,9 @@ class LoteEntregaServiceTest {
     private EntregaStatusHistoricoRepository historicoRepository;
 
     @Mock
+    private br.com.agilizadelivery.websocket.PublicadorTempoReal publicador;
+
+    @Mock
     private BuscadorTenant buscador;
 
     private LoteEntregaService service;
@@ -83,7 +86,7 @@ class LoteEntregaServiceTest {
     @BeforeEach
     void setUp() {
         service = new LoteEntregaServiceImpl(repository, entregaRepository, motoboyRepository,
-                buscador, new TransicaoEntrega(historicoRepository));
+                buscador, new TransicaoEntrega(historicoRepository), publicador);
         estabelecimento = Fixtures.estabelecimento();
         estabelecimentoId = estabelecimento.getId();
         motoboy = Fixtures.motoboy(estabelecimento);

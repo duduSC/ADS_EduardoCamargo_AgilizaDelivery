@@ -9,6 +9,7 @@ import org.springframework.transaction.annotation.Transactional;
 import br.com.agilizadelivery.dto.DtoMapper;
 import br.com.agilizadelivery.dto.request.AdministradorInicialRequest;
 import br.com.agilizadelivery.dto.request.CriarEstabelecimentoRequest;
+import br.com.agilizadelivery.dto.request.EditarEstabelecimentoRequest;
 import br.com.agilizadelivery.dto.response.EstabelecimentoResponse;
 import br.com.agilizadelivery.entity.model.Estabelecimento;
 import br.com.agilizadelivery.entity.model.embeddable.Coordenada;
@@ -19,6 +20,7 @@ import br.com.agilizadelivery.exception.EntidadeNaoEncontradaException;
 import br.com.agilizadelivery.repository.EstabelecimentoRepository;
 import br.com.agilizadelivery.service.EstabelecimentoService;
 import br.com.agilizadelivery.service.support.CadastroUsuario;
+import br.com.agilizadelivery.service.support.Coordenadas;
 
 @Service
 @Transactional(readOnly = true)
@@ -39,17 +41,19 @@ public class EstabelecimentoServiceImpl implements EstabelecimentoService {
     @Override
     @Transactional
     public EstabelecimentoResponse criar(CriarEstabelecimentoRequest request) {
-        if (repository.existsByCnpj(request.cnpj())) {
-            throw new CnpjJaCadastradoException(request.cnpj());
+        // gravado so com digitos (DVP 1.5.4): formatado nao cabe na coluna e burlaria a unicidade
+        String cnpj = request.cnpj().replaceAll("\\D", "");
+        if (repository.existsByCnpj(cnpj)) {
+            throw new CnpjJaCadastradoException(cnpj);
         }
 
-        Coordenada coordenada = new Coordenada(
+        Coordenada coordenada = Coordenadas.validada(
                 request.coordenada().latitude(),
                 request.coordenada().longitude());
         Estabelecimento estabelecimento = new Estabelecimento();
         estabelecimento.setRazaoSocial(request.razaoSocial());
         estabelecimento.setNomeFantasia(request.nomeFantasia());
-        estabelecimento.setCnpj(request.cnpj());
+        estabelecimento.setCnpj(cnpj);
         estabelecimento.setTelefone(request.telefone());
         estabelecimento.setEnderecoCompleto(request.enderecoCompleto());
         estabelecimento.setCoordenada(coordenada);
@@ -77,10 +81,35 @@ public class EstabelecimentoServiceImpl implements EstabelecimentoService {
     }
 
     @Override
+    public List<EstabelecimentoResponse> listarTodos() {
+        return repository.findAll().stream()
+                .map(DtoMapper::toResponse)
+                .toList();
+    }
+
+    @Override
     public List<EstabelecimentoResponse> listarPorStatus(StatusEstabelecimento status) {
         return repository.findByStatus(status).stream()
                 .map(DtoMapper::toResponse)
                 .toList();
+    }
+
+    @Override
+    @Transactional
+    public EstabelecimentoResponse editarParametros(UUID estabelecimentoId, EditarEstabelecimentoRequest request) {
+        Estabelecimento estabelecimento = repository.findById(estabelecimentoId)
+                .orElseThrow(() -> EntidadeNaoEncontradaException.porId(
+                        Estabelecimento.class, estabelecimentoId));
+        if (request.maxPedidosPorLote() != null) {
+            estabelecimento.setMaxPedidosPorLote(request.maxPedidosPorLote());
+        }
+        if (request.valorRepasseForaDeArea() != null) {
+            estabelecimento.setValorRepasseForaDeArea(request.valorRepasseForaDeArea());
+        }
+        if (request.telefone() != null) {
+            estabelecimento.setTelefone(request.telefone());
+        }
+        return DtoMapper.toResponse(repository.save(estabelecimento));
     }
 
     @Override

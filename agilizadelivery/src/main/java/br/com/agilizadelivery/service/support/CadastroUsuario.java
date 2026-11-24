@@ -1,5 +1,6 @@
 package br.com.agilizadelivery.service.support;
 
+import java.nio.charset.StandardCharsets;
 import java.util.Locale;
 
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -9,6 +10,7 @@ import br.com.agilizadelivery.entity.model.Estabelecimento;
 import br.com.agilizadelivery.entity.model.Usuario;
 import br.com.agilizadelivery.entity.model.enums.PerfilUsuario;
 import br.com.agilizadelivery.exception.EmailJaCadastradoException;
+import br.com.agilizadelivery.exception.RequisicaoInvalidaException;
 import br.com.agilizadelivery.repository.UsuarioRepository;
 
 /**
@@ -20,6 +22,8 @@ import br.com.agilizadelivery.repository.UsuarioRepository;
  */
 @Component
 public class CadastroUsuario {
+
+    private static final int LIMITE_BCRYPT_BYTES = 72;
 
     private final UsuarioRepository repository;
     private final PasswordEncoder passwordEncoder;
@@ -35,6 +39,7 @@ public class CadastroUsuario {
             String loginEmail,
             String senha,
             PerfilUsuario perfil) {
+        exigirSenhaQueCabeNoBCrypt(senha);
         String email = normalizarEmail(loginEmail);
         if (repository.existsByLoginEmail(email)) {
             throw new EmailJaCadastradoException(email);
@@ -48,6 +53,14 @@ public class CadastroUsuario {
         usuario.setPerfil(perfil);
         usuario.setAtivo(true);
         return repository.save(usuario);
+    }
+
+    /** O @Size conta caracteres; o limite do BCrypt e em bytes, e um acento ocupa dois. */
+    private static void exigirSenhaQueCabeNoBCrypt(String senha) {
+        if (senha != null && senha.getBytes(StandardCharsets.UTF_8).length > LIMITE_BCRYPT_BYTES) {
+            throw new RequisicaoInvalidaException(
+                    "A senha é longa demais: o limite é de 72 bytes, e letras acentuadas ocupam dois.");
+        }
     }
 
     public static String normalizarEmail(String loginEmail) {

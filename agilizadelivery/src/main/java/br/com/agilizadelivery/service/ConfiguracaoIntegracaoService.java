@@ -6,7 +6,6 @@ import java.util.UUID;
 
 import br.com.agilizadelivery.dto.request.SalvarConfiguracaoIntegracaoRequest;
 import br.com.agilizadelivery.dto.response.ConfiguracaoIntegracaoResponse;
-import br.com.agilizadelivery.entity.model.enums.Provedor;
 
 public interface ConfiguracaoIntegracaoService {
 
@@ -16,7 +15,7 @@ public interface ConfiguracaoIntegracaoService {
 
     ConfiguracaoIntegracaoResponse buscarPorEstabelecimentoEProvedor(
             UUID estabelecimentoId,
-            Provedor provedor);
+            String provedor);
 
     List<ConfiguracaoIntegracaoResponse> listarPorEstabelecimento(UUID estabelecimentoId);
 

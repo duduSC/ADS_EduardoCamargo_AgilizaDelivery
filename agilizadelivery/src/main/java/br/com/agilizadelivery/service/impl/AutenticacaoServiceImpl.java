@@ -1,6 +1,5 @@
 package br.com.agilizadelivery.service.impl;
 
-import java.time.LocalDateTime;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -25,6 +24,7 @@ import br.com.agilizadelivery.repository.UsuarioRepository;
 import br.com.agilizadelivery.service.AutenticacaoService;
 import br.com.agilizadelivery.service.CanalAcesso;
 import br.com.agilizadelivery.service.support.CadastroUsuario;
+import br.com.agilizadelivery.tempo.HorarioLocal;
 
 /**
  * Autenticacao por e-mail e senha (UC07).
@@ -60,7 +60,17 @@ public class AutenticacaoServiceImpl implements AutenticacaoService {
     @Override
     @Transactional
     public UsuarioAutenticadoResponse autenticar(LoginRequest request, CanalAcesso canal) {
-        Usuario usuario = validarCredenciais(request);
+        return liberarAcesso(validarCredenciais(request), canal);
+    }
+
+    @Override
+    @Transactional
+    public UsuarioAutenticadoResponse reautenticar(UUID usuarioId, CanalAcesso canal) {
+        Usuario usuario = usuarioRepository.findById(usuarioId).orElseThrow(CredenciaisInvalidasException::new);
+        return liberarAcesso(usuario, canal);
+    }
+
+    private UsuarioAutenticadoResponse liberarAcesso(Usuario usuario, CanalAcesso canal) {
         if (!Boolean.TRUE.equals(usuario.getAtivo())) {
             throw new UsuarioBloqueadoException(usuario.getLoginEmail(), "o usuário está inativo");
         }
@@ -70,7 +80,7 @@ public class AutenticacaoServiceImpl implements AutenticacaoService {
         }
         UUID motoboyId = usuario.getPerfil() == PerfilUsuario.ENTREGADOR ? motoboyAtivo(usuario).getId() : null;
 
-        usuario.setUltimoAcessoEm(LocalDateTime.now());
+        usuario.setUltimoAcessoEm(HorarioLocal.agora());
         usuarioRepository.save(usuario);
         return new UsuarioAutenticadoResponse(
                 usuario.getId(),
@@ -92,7 +102,7 @@ public class AutenticacaoServiceImpl implements AutenticacaoService {
     }
 
     private static void exigirCanalDoPerfil(PerfilUsuario perfil, CanalAcesso canal) {
-        CanalAcesso esperado = perfil == PerfilUsuario.ENTREGADOR ? CanalAcesso.APLICATIVO : CanalAcesso.BACKOFFICE_WEB;
+        CanalAcesso esperado = perfil == PerfilUsuario.ENTREGADOR ? CanalAcesso.APP : CanalAcesso.BACKOFFICE;
         if (canal != esperado) {
             throw new AcessoNegadoException(perfil == PerfilUsuario.ENTREGADOR
                     ? "Entregadores acessam o sistema apenas pelo aplicativo."

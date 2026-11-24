@@ -1,5 +1,9 @@
 package br.com.agilizadelivery.entity.model;
 
+import org.hibernate.annotations.DynamicUpdate;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
+
 import br.com.agilizadelivery.entity.model.base.EntidadeBase;
 import br.com.agilizadelivery.entity.model.embeddable.Coordenada;
 import java.time.LocalDateTime;
@@ -17,6 +21,7 @@ import jakarta.persistence.FetchType;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.OneToOne;
 import jakarta.persistence.Table;
+import jakarta.persistence.UniqueConstraint;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -44,7 +49,12 @@ import lombok.Setter;
 @NoArgsConstructor
 @AllArgsConstructor
 @Entity
-@Table(name = "motoboy")
+// A posicao do GPS (a cada 20 s, sem trava) grava so as suas colunas e nao
+// desfaz bloqueio nem EM_ROTA gravados no meio do caminho.
+@DynamicUpdate
+@Table(
+        name = "motoboy",
+        uniqueConstraints = @UniqueConstraint(name = "uk_motoboy_cpf_hash", columnNames = "cpf_hash"))
 public class Motoboy extends EntidadeBase {
 
     /** Vinculo que permite o login no aplicativo (HU09). */
@@ -65,7 +75,7 @@ public class Motoboy extends EntidadeBase {
     /** Indice cego: HMAC-SHA256 do CPF. Detecta duplicidade (UC05 E2). */
     @NotBlank
     @Size(max = 64)
-    @Column(name = "cpf_hash", nullable = false, unique = true, length = 64)
+    @Column(name = "cpf_hash", nullable = false, length = 64)
     private String cpfHash;
 
     @NotBlank
@@ -79,11 +89,13 @@ public class Motoboy extends EntidadeBase {
 
     @NotNull
     @Enumerated(EnumType.STRING)
+    @JdbcTypeCode(SqlTypes.NAMED_ENUM)
     @Column(name = "status_cadastro", nullable = false, length = 10)
     private StatusCadastroMotoboy statusCadastro = StatusCadastroMotoboy.ATIVO;
 
     @NotNull
     @Enumerated(EnumType.STRING)
+    @JdbcTypeCode(SqlTypes.NAMED_ENUM)
     @Column(name = "status_disponibilidade", nullable = false, length = 10)
     private StatusDisponibilidadeMotoboy statusDisponibilidade = StatusDisponibilidadeMotoboy.OFFLINE;
 

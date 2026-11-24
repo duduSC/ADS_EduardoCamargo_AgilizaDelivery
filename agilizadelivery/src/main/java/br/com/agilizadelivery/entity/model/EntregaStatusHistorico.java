@@ -1,9 +1,13 @@
 package br.com.agilizadelivery.entity.model;
 
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
+
 import br.com.agilizadelivery.entity.model.embeddable.Coordenada;
 import java.time.LocalDateTime;
 
 import br.com.agilizadelivery.entity.model.enums.StatusEntrega;
+import br.com.agilizadelivery.tempo.HorarioLocal;
 import jakarta.persistence.Column;
 import jakarta.persistence.Embedded;
 import jakarta.persistence.EnumType;
@@ -56,11 +60,13 @@ public class EntregaStatusHistorico {
 
     /** Nulo na primeira transicao, quando a entrega e criada. */
     @Enumerated(EnumType.STRING)
+    @JdbcTypeCode(SqlTypes.NAMED_ENUM)
     @Column(name = "status_anterior", length = 25)
     private StatusEntrega statusAnterior;
 
     @NotNull
     @Enumerated(EnumType.STRING)
+    @JdbcTypeCode(SqlTypes.NAMED_ENUM)
     @Column(name = "status_novo", nullable = false, length = 25)
     private StatusEntrega statusNovo;
 
@@ -81,7 +87,7 @@ public class EntregaStatusHistorico {
     @PrePersist
     protected void aoCriar() {
         if (this.registradoEm == null) {
-            this.registradoEm = LocalDateTime.now();
+            this.registradoEm = HorarioLocal.agora();
         }
     }
 }

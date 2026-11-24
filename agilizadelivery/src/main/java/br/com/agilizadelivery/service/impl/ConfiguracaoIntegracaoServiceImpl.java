@@ -11,12 +11,12 @@ import br.com.agilizadelivery.dto.request.SalvarConfiguracaoIntegracaoRequest;
 import br.com.agilizadelivery.dto.response.ConfiguracaoIntegracaoResponse;
 import br.com.agilizadelivery.entity.model.ConfiguracaoIntegracao;
 import br.com.agilizadelivery.entity.model.Estabelecimento;
-import br.com.agilizadelivery.entity.model.enums.Provedor;
 import br.com.agilizadelivery.exception.ConflitoDadosException;
 import br.com.agilizadelivery.exception.EntidadeNaoEncontradaException;
 import br.com.agilizadelivery.repository.ConfiguracaoIntegracaoRepository;
 import br.com.agilizadelivery.service.ConfiguracaoIntegracaoService;
 import br.com.agilizadelivery.service.support.BuscadorTenant;
+import br.com.agilizadelivery.service.support.Provedores;
 
 @Service
 @Transactional(readOnly = true)
@@ -37,19 +37,21 @@ public class ConfiguracaoIntegracaoServiceImpl implements ConfiguracaoIntegracao
     public ConfiguracaoIntegracaoResponse salvar(
             UUID estabelecimentoId,
             SalvarConfiguracaoIntegracaoRequest request) {
+        buscador.travarLoja(estabelecimentoId);
+        String provedor = Provedores.normalizar(request.provedor());
         Estabelecimento estabelecimento = buscador.estabelecimentoAtivo(estabelecimentoId);
 
         ConfiguracaoIntegracao configuracao = repository
-                .findByEstabelecimentoIdAndProvedor(estabelecimentoId, request.provedor())
+                .findByEstabelecimentoIdAndProvedor(estabelecimentoId, provedor)
                 .orElseGet(() -> {
                     ConfiguracaoIntegracao nova = new ConfiguracaoIntegracao();
                     nova.setEstabelecimento(estabelecimento);
-                    nova.setProvedor(request.provedor());
+                    nova.setProvedor(provedor);
                     nova.setAtivo(true);
                     return nova;
                 });
 
-        repository.findByProvedorAndMerchantId(request.provedor(), request.merchantId())
+        repository.findByProvedorAndMerchantId(provedor, request.merchantId())
                 .filter(outra -> !outra.getId().equals(configuracao.getId()))
                 .ifPresent(outra -> {
                     throw new ConflitoDadosException(
@@ -57,20 +59,24 @@ public class ConfiguracaoIntegracaoServiceImpl implements ConfiguracaoIntegracao
                 });
 
         configuracao.setMerchantId(request.merchantId());
+        if (request.ativo() != null) {
+            configuracao.setAtivo(request.ativo());
+        }
         return DtoMapper.toResponse(repository.save(configuracao));
     }
 
     @Override
     public ConfiguracaoIntegracaoResponse buscarPorEstabelecimentoEProvedor(
             UUID estabelecimentoId,
-            Provedor provedor) {
+            String provedor) {
+        String normalizado = Provedores.normalizar(provedor);
         ConfiguracaoIntegracao configuracao = repository
-                .findByEstabelecimentoIdAndProvedor(estabelecimentoId, provedor)
+                .findByEstabelecimentoIdAndProvedor(estabelecimentoId, normalizado)
                 .orElseThrow(() -> new EntidadeNaoEncontradaException(
                         String.format(
                                 "Nenhuma configuração de integração encontrada para o estabelecimento '%s' e provedor '%s'.",
                                 estabelecimentoId,
-                                provedor)));
+                                normalizado)));
         return DtoMapper.toResponse(configuracao);
     }
 

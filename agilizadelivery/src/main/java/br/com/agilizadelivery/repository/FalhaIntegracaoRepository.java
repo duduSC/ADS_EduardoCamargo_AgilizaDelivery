@@ -19,9 +19,6 @@ import br.com.agilizadelivery.entity.model.enums.StatusFalhaIntegracao;
 @Repository
 public interface FalhaIntegracaoRepository extends JpaRepository<FalhaIntegracao, Long> {
 
-    /** Falhas por situacao; PENDENTE alimenta o alerta de integracao degradada. */
-    List<FalhaIntegracao> findByStatus(StatusFalhaIntegracao status);
-
     List<FalhaIntegracao> findByConfiguracaoIntegracaoEstabelecimentoIdAndStatus(
             UUID estabelecimentoId,
             StatusFalhaIntegracao status);
@@ -29,9 +26,6 @@ public interface FalhaIntegracaoRepository extends JpaRepository<FalhaIntegracao
     Optional<FalhaIntegracao> findByIdAndConfiguracaoIntegracaoEstabelecimentoId(
             Long id,
             UUID estabelecimentoId);
-
-    /** Contador para o indicador no painel, sem carregar os registros. */
-    long countByStatus(StatusFalhaIntegracao status);
 
     long countByConfiguracaoIntegracaoEstabelecimentoIdAndStatus(
             UUID estabelecimentoId,

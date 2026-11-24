@@ -7,7 +7,6 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.when;
 
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 import java.util.Optional;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -29,6 +28,7 @@ import br.com.agilizadelivery.exception.AjusteValorNaoPermitidoException;
 import br.com.agilizadelivery.exception.CaixaFechadoException;
 import br.com.agilizadelivery.repository.CaixaRepository;
 import br.com.agilizadelivery.service.Fixtures;
+import br.com.agilizadelivery.tempo.HorarioLocal;
 
 @ExtendWith(MockitoExtension.class)
 class PoliticaCorrecaoTest {
@@ -96,7 +96,7 @@ class PoliticaCorrecaoTest {
     @DisplayName("Deve usar o caixa do dia corrente para entrega ainda não finalizada")
     void deveUsarCaixaDeHojeParaEntregaEmAndamento() {
         entrega.setFinalizadaEm(null);
-        LocalDate hoje = LocalDateTime.now().toLocalDate();
+        LocalDate hoje = HorarioLocal.hoje();
         when(caixaRepository.findByEstabelecimentoIdAndDataReferencia(estabelecimento.getId(), hoje))
                 .thenReturn(Optional.of(Fixtures.caixa(estabelecimento, StatusCaixa.ABERTO, hoje)));
 

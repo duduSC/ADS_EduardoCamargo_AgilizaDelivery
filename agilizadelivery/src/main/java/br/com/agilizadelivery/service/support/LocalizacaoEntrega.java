@@ -36,26 +36,38 @@ public class LocalizacaoEntrega {
         this.calculadoraRepasse = calculadoraRepasse;
     }
 
-    public void localizar(Entrega entrega) {
-        if (entrega.getCoordenada() == null || !entrega.getCoordenada().preenchida()) {
-            Optional<Coordenada> encontrada = geocodificacao.geocodificar(entrega.getEnderecoCompleto());
-            if (encontrada.isEmpty()) {
-                entrega.setCoordenada(null);
-                marcarRevisao(entrega, MotivoRevisao.SEM_COORDENADA);
-                return;
-            }
-            entrega.setCoordenada(encontrada.get());
-        }
+    /** O que a Google Maps Platform respondeu; falha nula quando ha distancia. */
+    public record Posicao(Coordenada coordenada, BigDecimal distanciaKm, MotivoRevisao falha) {
+    }
 
-        Optional<BigDecimal> distancia = rotas.distanciaKm(
-                entrega.getEstabelecimento().getCoordenada(),
-                entrega.getCoordenada());
+    /**
+     * So as chamadas externas (ate 5 s cada): fora de transacao, para nao
+     * prender conexao do pool nem a trava da loja (T014).
+     */
+    public Posicao consultar(Coordenada informada, String endereco, Coordenada origem) {
+        Coordenada destino = informada;
+        if (destino == null || !destino.preenchida()) {
+            Optional<Coordenada> encontrada = geocodificacao.geocodificar(endereco);
+            if (encontrada.isEmpty()) {
+                return new Posicao(null, null, MotivoRevisao.SEM_COORDENADA);
+            }
+            destino = encontrada.get();
+        }
+        Optional<BigDecimal> distancia = rotas.distanciaKm(origem, destino);
         if (distancia.isEmpty()) {
-            marcarRevisao(entrega, MotivoRevisao.SEM_DISTANCIA);
+            return new Posicao(destino, null, MotivoRevisao.SEM_DISTANCIA);
+        }
+        return new Posicao(destino, distancia.get(), null);
+    }
+
+    /** Grava a posicao na entrega, com a faixa vigente; dentro da transacao. */
+    public void aplicar(Entrega entrega, Posicao posicao) {
+        entrega.setCoordenada(posicao.coordenada());
+        if (posicao.falha() != null) {
+            marcarRevisao(entrega, posicao.falha());
             return;
         }
-
-        entrega.setDistanciaKm(distancia.get());
+        entrega.setDistanciaKm(posicao.distanciaKm());
         calculadoraRepasse.aplicarFaixaVigente(entrega);
         limparRevisaoDeLocalizacao(entrega);
     }

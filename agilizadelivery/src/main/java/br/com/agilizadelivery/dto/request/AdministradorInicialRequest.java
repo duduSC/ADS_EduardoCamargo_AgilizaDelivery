@@ -9,4 +9,10 @@ public record AdministradorInicialRequest(
         @NotBlank @Size(max = 120) String nome,
         @NotBlank @Email @Size(max = 150) String loginEmail,
         @NotBlank @Size(min = 8, max = 72) String senha) {
+
+    /** A senha nunca aparece em log (Constituicao 6.2). */
+    @Override
+    public String toString() {
+        return "AdministradorInicialRequest[nome=" + nome + ", loginEmail=" + loginEmail + ", senha=***]";
+    }
 }

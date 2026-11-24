@@ -3,6 +3,8 @@ package br.com.agilizadelivery.entity.model.base;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
+import br.com.agilizadelivery.tempo.HorarioLocal;
+
 import jakarta.persistence.Column;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
@@ -46,14 +48,14 @@ public abstract class EntidadeBase {
 
     @PrePersist
     protected void aoCriar() {
-        LocalDateTime agora = LocalDateTime.now();
+        LocalDateTime agora = HorarioLocal.agora();
         this.criadoEm = agora;
         this.atualizadoEm = agora;
     }
 
     @PreUpdate
     protected void aoAtualizar() {
-        this.atualizadoEm = LocalDateTime.now();
+        this.atualizadoEm = HorarioLocal.agora();
     }
 
     /**
