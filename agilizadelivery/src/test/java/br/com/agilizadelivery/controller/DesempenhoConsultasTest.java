@@ -24,6 +24,7 @@ import org.springframework.jdbc.datasource.init.ResourceDatabasePopulator;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
 
+import br.com.agilizadelivery.entity.model.Caixa;
 import br.com.agilizadelivery.entity.model.DistanciaPreco;
 import br.com.agilizadelivery.entity.model.Entrega;
 import br.com.agilizadelivery.entity.model.Estabelecimento;
@@ -31,6 +32,7 @@ import br.com.agilizadelivery.entity.model.ItemPedido;
 import br.com.agilizadelivery.entity.model.LoteEntrega;
 import br.com.agilizadelivery.entity.model.Motoboy;
 import br.com.agilizadelivery.entity.model.PedidoExterno;
+import br.com.agilizadelivery.entity.model.Recibo;
 import br.com.agilizadelivery.entity.model.Usuario;
 import br.com.agilizadelivery.entity.model.enums.PerfilUsuario;
 import br.com.agilizadelivery.entity.model.enums.StatusEntrega;
@@ -67,7 +69,7 @@ class DesempenhoConsultasTest {
     private JdbcTemplate jdbc;
 
     @Test
-    @DisplayName("Sem N+1 nas telas de despacho, frota, acerto e relatório do dia e no polling do app")
+    @DisplayName("Sem N+1 nas telas de despacho, frota, acerto e relatório do dia, no polling e nos recibos do app")
     void semNMaisUm() throws Exception {
         Map<String, Long> comUm = consultasPorEndpoint(1);
         Map<String, Long> comSeis = consultasPorEndpoint(6);
@@ -102,8 +104,16 @@ class DesempenhoConsultasTest {
 
         LoteEntrega concluido = lote(loja, motoboy, operador, StatusLote.CONCLUIDO);
         LoteEntrega ativo = lote(loja, motoboy, operador, StatusLote.EM_ROTA);
+        Caixa caixa = cenario.caixa(loja);
+        Recibo reciboDetalhado = cenario.recibo(loja, motoboy, caixa, operador);
         AtomicInteger numero = new AtomicInteger();
         for (int i = 0; i < linhas; i++) {
+            // Recibos do app (D013): a lista com N recibos e o detalhe com N entregas
+            if (i > 0) {
+                cenario.recibo(loja, motoboy, caixa, operador);
+            }
+            cenario.entregaComRecibo(loja, reciboDetalhado);
+
             cenario.entrega(loja, StatusEntrega.AGUARDANDO_DESPACHO);
             lote(loja, motoboy, operador, StatusLote.DESPACHADO);
 
@@ -164,6 +174,9 @@ class DesempenhoConsultasTest {
         consultas.put("lote-ativo do app",
                 contar("/api/entregador/lote-ativo", cenario.bearer(motoboy.getUsuario())));
         consultas.put("relatorio do dia", contar("/api/relatorios/dia?data=" + hoje, bearerOperador));
+        consultas.put("recibos do app", contar("/api/entregador/recibos", cenario.bearer(motoboy.getUsuario())));
+        consultas.put("recibo do app",
+                contar("/api/entregador/recibos/" + reciboDetalhado.getId(), cenario.bearer(motoboy.getUsuario())));
         consultas.put("rota", contar("/api/lotes/" + ativo.getId() + "/rota", bearerOperador));
         return consultas;
     }

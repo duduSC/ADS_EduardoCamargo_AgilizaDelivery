@@ -53,6 +53,10 @@ public interface EntregaRepository extends JpaRepository<Entrega, UUID> {
 
     List<Entrega> findByReciboId(UUID reciboId);
 
+    /** Entregas de um recibo da loja, na ordem em que foram finalizadas (D013). */
+    List<Entrega> findByEstabelecimentoIdAndReciboIdOrderByFinalizadaEmAscIdAsc(
+            UUID estabelecimentoId, UUID reciboId);
+
     /**
      * Entregas da loja finalizadas em [inicio, fim), com o entregador do
      * lote e o recibo numa consulta so, para o relatorio do dia (D013). A

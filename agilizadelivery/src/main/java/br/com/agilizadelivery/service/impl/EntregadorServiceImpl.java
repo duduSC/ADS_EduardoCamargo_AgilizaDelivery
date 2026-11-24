@@ -17,14 +17,18 @@ import br.com.agilizadelivery.dto.request.AlterarDisponibilidadeMotoboyRequest;
 import br.com.agilizadelivery.dto.request.AlterarStatusEntregaRequest;
 import br.com.agilizadelivery.dto.response.AcertoDoEntregadorResponse;
 import br.com.agilizadelivery.dto.response.EntregaDoEntregadorResponse;
+import br.com.agilizadelivery.dto.response.EntregaDoReciboResponse;
 import br.com.agilizadelivery.dto.response.ExtratoAcertoResponse;
 import br.com.agilizadelivery.dto.response.ItemDoEntregadorResponse;
 import br.com.agilizadelivery.dto.response.LoteDoEntregadorResponse;
 import br.com.agilizadelivery.dto.response.MotoboyResponse;
+import br.com.agilizadelivery.dto.response.ReciboDoEntregadorDetalheResponse;
+import br.com.agilizadelivery.dto.response.ReciboDoEntregadorResponse;
 import br.com.agilizadelivery.entity.model.Caixa;
 import br.com.agilizadelivery.entity.model.Entrega;
 import br.com.agilizadelivery.entity.model.LoteEntrega;
 import br.com.agilizadelivery.entity.model.Motoboy;
+import br.com.agilizadelivery.entity.model.Recibo;
 import br.com.agilizadelivery.entity.model.enums.StatusDisponibilidadeMotoboy;
 import br.com.agilizadelivery.entity.model.enums.StatusLote;
 import br.com.agilizadelivery.exception.EntidadeNaoEncontradaException;
@@ -34,6 +38,7 @@ import br.com.agilizadelivery.repository.CaixaRepository;
 import br.com.agilizadelivery.repository.EntregaRepository;
 import br.com.agilizadelivery.repository.LoteEntregaRepository;
 import br.com.agilizadelivery.repository.MotoboyRepository;
+import br.com.agilizadelivery.repository.ReciboRepository;
 import br.com.agilizadelivery.service.EntregaService;
 import br.com.agilizadelivery.service.EntregadorService;
 import br.com.agilizadelivery.service.ExtratoAcertoService;
@@ -55,6 +60,7 @@ public class EntregadorServiceImpl implements EntregadorService {
     private final LoteEntregaRepository loteRepository;
     private final EntregaRepository entregaRepository;
     private final CaixaRepository caixaRepository;
+    private final ReciboRepository reciboRepository;
     private final MotoboyService motoboyService;
     private final LoteEntregaService loteService;
     private final EntregaService entregaService;
@@ -66,6 +72,7 @@ public class EntregadorServiceImpl implements EntregadorService {
             LoteEntregaRepository loteRepository,
             EntregaRepository entregaRepository,
             CaixaRepository caixaRepository,
+            ReciboRepository reciboRepository,
             MotoboyService motoboyService,
             LoteEntregaService loteService,
             EntregaService entregaService,
@@ -75,6 +82,7 @@ public class EntregadorServiceImpl implements EntregadorService {
         this.loteRepository = loteRepository;
         this.entregaRepository = entregaRepository;
         this.caixaRepository = caixaRepository;
+        this.reciboRepository = reciboRepository;
         this.motoboyService = motoboyService;
         this.loteService = loteService;
         this.entregaService = entregaService;
@@ -207,6 +215,60 @@ public class EntregadorServiceImpl implements EntregadorService {
                 dataReferencia,
                 caixa.map(Caixa::getStatus).orElse(null),
                 caixa.map(Caixa::estaAberto).orElse(false));
+    }
+
+    /** Recibos do proprio entregador, em qualquer status (D013, extensao do UC08). */
+    @Override
+    public List<ReciboDoEntregadorResponse> listarRecibos(UUID estabelecimentoId, UUID usuarioId) {
+        UUID motoboyId = motoboyDoUsuario(estabelecimentoId, usuarioId);
+        return reciboRepository
+                .findByEstabelecimentoIdAndMotoboyIdOrderByDataReferenciaDescCriadoEmDescIdDesc(
+                        estabelecimentoId, motoboyId)
+                .stream()
+                .map(EntregadorServiceImpl::resumo)
+                .toList();
+    }
+
+    /**
+     * Recibo de outra loja ou de outro entregador responde como inexistente,
+     * com o mesmo 404 de um id que nao existe (HU13, HU14).
+     *
+     * O recibo CANCELADO volta sem entregas: o cancelamento as desvincula
+     * (UC03 A2) e o modelo nao guarda o vinculo antigo. qtdEntregas e
+     * valorTotal continuam os da emissao.
+     */
+    @Override
+    public ReciboDoEntregadorDetalheResponse buscarRecibo(UUID estabelecimentoId, UUID usuarioId, UUID reciboId) {
+        UUID motoboyId = motoboyDoUsuario(estabelecimentoId, usuarioId);
+        Recibo recibo = reciboRepository.findByIdAndEstabelecimentoId(reciboId, estabelecimentoId)
+                .filter(r -> motoboyId.equals(r.getMotoboy().getId()))
+                .orElseThrow(() -> EntidadeNaoEncontradaException.porId(Recibo.class, reciboId));
+        List<EntregaDoReciboResponse> entregas = entregaRepository
+                .findByEstabelecimentoIdAndReciboIdOrderByFinalizadaEmAscIdAsc(estabelecimentoId, recibo.getId())
+                .stream()
+                .map(entrega -> new EntregaDoReciboResponse(
+                        entrega.getId(),
+                        entrega.getNomeCliente(),
+                        entrega.getFinalizadaEm(),
+                        entrega.getStatus(),
+                        entrega.getDistanciaKm(),
+                        entrega.getValorRepasse()))
+                .toList();
+        return ReciboDoEntregadorDetalheResponse.de(resumo(recibo), entregas);
+    }
+
+    /** O recibo sem o caixa, o operador gerador e o proprio entregador. */
+    private static ReciboDoEntregadorResponse resumo(Recibo recibo) {
+        return new ReciboDoEntregadorResponse(
+                recibo.getId(),
+                recibo.getDataReferencia(),
+                recibo.getPeriodoInicio(),
+                recibo.getPeriodoFim(),
+                recibo.getQtdEntregas(),
+                recibo.getValorTotal(),
+                recibo.getStatus(),
+                recibo.getPagoEm(),
+                recibo.getCriadoEm());
     }
 
     private Motoboy motoboy(UUID estabelecimentoId, UUID usuarioId) {

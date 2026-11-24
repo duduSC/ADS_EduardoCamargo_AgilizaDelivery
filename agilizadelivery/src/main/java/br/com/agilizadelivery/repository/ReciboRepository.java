@@ -34,4 +34,15 @@ public interface ReciboRepository extends JpaRepository<Recibo, UUID> {
 
     /** Recibos de um entregador, independente de status. */
     List<Recibo> findByEstabelecimentoIdAndMotoboyId(UUID estabelecimentoId, UUID motoboyId);
+
+    /**
+     * Recibos do entregador para o aplicativo, do mais recente para o mais
+     * antigo (D013).
+     *
+     * PROVISORIO (a D013 nao fixa a chave): mais recente e o dia do caixa
+     * (dataReferencia), depois a emissao (criadoEm); o id desempata, para a
+     * ordem nunca variar entre duas consultas.
+     */
+    List<Recibo> findByEstabelecimentoIdAndMotoboyIdOrderByDataReferenciaDescCriadoEmDescIdDesc(
+            UUID estabelecimentoId, UUID motoboyId);
 }

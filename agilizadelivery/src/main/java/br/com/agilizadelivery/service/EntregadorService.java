@@ -2,6 +2,7 @@ package br.com.agilizadelivery.service;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -11,6 +12,8 @@ import br.com.agilizadelivery.dto.response.AcertoDoEntregadorResponse;
 import br.com.agilizadelivery.dto.response.EntregaDoEntregadorResponse;
 import br.com.agilizadelivery.dto.response.LoteDoEntregadorResponse;
 import br.com.agilizadelivery.dto.response.MotoboyResponse;
+import br.com.agilizadelivery.dto.response.ReciboDoEntregadorDetalheResponse;
+import br.com.agilizadelivery.dto.response.ReciboDoEntregadorResponse;
 
 /**
  * Operacoes do aplicativo do entregador (UC02, UC08, D008).
@@ -43,4 +46,10 @@ public interface EntregadorService {
 
     AcertoDoEntregadorResponse acerto(
             UUID estabelecimentoId, UUID usuarioId, LocalDateTime inicio, LocalDateTime fim);
+
+    /** Recibos do proprio entregador, do mais recente para o mais antigo (D013). */
+    List<ReciboDoEntregadorResponse> listarRecibos(UUID estabelecimentoId, UUID usuarioId);
+
+    /** Recibo do proprio entregador com as entregas; de outro entregador, 404 (D013). */
+    ReciboDoEntregadorDetalheResponse buscarRecibo(UUID estabelecimentoId, UUID usuarioId, UUID reciboId);
 }

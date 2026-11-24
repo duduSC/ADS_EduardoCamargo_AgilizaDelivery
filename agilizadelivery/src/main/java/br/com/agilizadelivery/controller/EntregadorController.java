@@ -1,6 +1,7 @@
 package br.com.agilizadelivery.controller;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.UUID;
 
 import org.springframework.http.ResponseEntity;
@@ -22,6 +23,8 @@ import br.com.agilizadelivery.dto.response.AcertoDoEntregadorResponse;
 import br.com.agilizadelivery.dto.response.EntregaDoEntregadorResponse;
 import br.com.agilizadelivery.dto.response.LoteDoEntregadorResponse;
 import br.com.agilizadelivery.dto.response.MotoboyResponse;
+import br.com.agilizadelivery.dto.response.ReciboDoEntregadorDetalheResponse;
+import br.com.agilizadelivery.dto.response.ReciboDoEntregadorResponse;
 import br.com.agilizadelivery.exception.AcessoNegadoException;
 import br.com.agilizadelivery.seguranca.Perfis;
 import br.com.agilizadelivery.seguranca.jwt.UsuarioLogado;
@@ -111,6 +114,20 @@ public class EntregadorController {
             @RequestParam(required = false) LocalDateTime inicio,
             @RequestParam(required = false) LocalDateTime fim) {
         return entregadorService.acerto(estabelecimento(logado), logado.usuarioId(), inicio, fim);
+    }
+
+    /** Recibos do proprio entregador, do mais recente para o mais antigo (D013). */
+    @GetMapping("/recibos")
+    public List<ReciboDoEntregadorResponse> recibos(@AuthenticationPrincipal UsuarioLogado logado) {
+        return entregadorService.listarRecibos(estabelecimento(logado), logado.usuarioId());
+    }
+
+    /** Recibo com as entregas; o de outro entregador responde 404 (D013). */
+    @GetMapping("/recibos/{id}")
+    public ReciboDoEntregadorDetalheResponse recibo(
+            @AuthenticationPrincipal UsuarioLogado logado,
+            @PathVariable UUID id) {
+        return entregadorService.buscarRecibo(estabelecimento(logado), logado.usuarioId(), id);
     }
 
     /** Estabelecimento do token, exigindo o canal do aplicativo (UC07 E4). */
