@@ -1,7 +1,7 @@
 # Agiliza Delivery
 
 > Plataforma de logística de entregas para restaurantes com frota própria de entregadores.
-> Projeto acadêmico do curso de Análise e Desenvolvimento de Sistemas, de Eduardo Camargo.
+> Projeto acadêmico de Eduardo dos Santos de Camargo (2026). Os requisitos completos estão no [Documento de Visão do Produto](agilizadelivery/docs/DVP_Agiliza_Delivery_latest_version.md).
 
 O Agiliza Delivery é o "sistema nervoso central" da entrega própria de um restaurante:
 - recebe os pedidos automaticamente;
@@ -140,7 +140,7 @@ Módulos de apoio: `dto/` (contratos da API, separados das entidades), `exceptio
 
 **Por que essa divisão compensou neste projeto (exemplos reais):**
 - **Trocar o banco sem tocar na regra:** o mesmo código roda no H2 em memória (demonstração) e no PostgreSQL 16 (produção, com migrações Flyway).
-- **Trocar o cálculo de distância sem tocar na regra:** a distância vem de uma interface (`ServicoDeRotas`). Com a chave do Google, usa a Routes API (rota de moto); sem a chave, usa uma estimativa em linha reta.
+- **Trocar o cálculo de distância sem tocar na regra:** a distância vem de uma interface (`ServicoDeRotas`). Com a chave do Google, usa a Routes API com **rota de moto** (`TWO_WHEELER`), e a de carro como reserva quando o Google não tem rota de moto para o trecho. Sem a chave, usa uma estimativa em linha reta × 1,3. O cálculo do repasse no Service é o mesmo nos três casos.
 - **Trocar a origem dos pedidos sem tocar na regra:** a integração fica atrás da interface `ProvedorDePedidos` (padrão Adapter). Hoje roda o Simulador; o iFood entra no mesmo lugar.
 - **Corrigir em um só lugar:** um bug de fuso horário (o servidor em UTC fazia o "hoje" virar amanhã depois das 21h) foi corrigido centralizando "agora" e "hoje" em `tempo/HorarioLocal`.
 - **Testar cada camada isolada:** o backend tem mais de 800 testes automatizados.
@@ -185,11 +185,15 @@ lib/
 |---|---|
 | **Login** | E-mail e senha, com mensagem de erro genérica. O entregador é recusado, porque o lugar dele é o app |
 | **Início** | Nome, perfil e loja, mais atalhos para as telas daquele perfil |
-| **Despacho / Operação** | Mapa com a loja, os pedidos e os entregadores, com filtros (aguardando despacho / saiu para entrega). Mostra tempo na estufa, distância, repasse, forma de pagamento e troco. Permite marcar pronto, selecionar vários pedidos e **despachar** para um entregador online, devolver o lote, cadastrar entrega avulsa, analisar a **contestação** do entregador e reposicionar o pino das entregas sem localização |
-| **Monitoramento** | Entregadores no mapa em tempo real, com alerta de posição desatualizada |
+| **Operação** (Despacho e Monitoramento numa tela só) | Mapa claro ocupando a tela, com a loja, os **pedidos numerados** e os **entregadores (ícone de moto) se movendo em tempo real**. Uma lista lateral repete os mesmos números. Filtros **Aguardando despacho**, **Saiu para entrega** e **Todos**, e botão para reenquadrar o mapa. Mostra o tempo do pedido na estufa, a distância, o repasse, a forma de pagamento e o troco |
+| **Despachar** (na Operação) | Marcar o pedido como pronto, selecionar vários no mapa ou na lista e **despachar** para um entregador online, até o limite de pedidos por lote da loja. Também permite devolver um lote que ainda não saiu e cadastrar uma entrega avulsa |
+| **Revisão** (na Operação) | Entregas pendentes de análise. **Analisar contestação** do entregador: manter o valor ou ajustar, sempre com motivo. **Reposicionar pino** de entrega sem localização ou sem distância, e o backend recalcula o km e o repasse |
+| **Monitoramento** | A frota no mapa em tempo real, com alerta de posição desatualizada (mais de 3 minutos sem sinal) |
 | **Acerto** | Extrato por entregador e período (distância, faixa e valor de cada entrega), ajuste de repasse com motivo, **gerar recibo** e **marcar como pago** |
 | **Caixa** | Abrir e fechar o caixa do dia. Fechado, o dia fica imutável |
-| **Relatório do dia** | Entregadores que trabalharam, entregas por entregador, totais de entregas e valores de repasse (pago e a pagar), todos calculados pelo servidor |
+| **Relatório do dia** | Escolhida a data: entregadores que trabalharam, entregas por entregador, total de entregas (entregues, falhas, canceladas) e valores de repasse (total, pago e a pagar). Todos os totais vêm do servidor |
+
+Os filtros e a seleção de cada tela ficam guardados ao trocar de aba: por exemplo, o entregador e o período escolhidos no Acerto continuam lá ao voltar.
 
 ### 6.2 App do entregador
 
@@ -206,16 +210,19 @@ Com o app aberto e o entregador online, a posição GPS é enviada a cada 20 s e
 ### 6.3 Backend
 
 - Autenticação JWT com refresh, perfis e canais.
-- CRUD e regras de entregas, lotes, entregadores, recibos, caixa, faixas de preço, usuários, restaurantes e integração.
+- Regras e endpoints de entregas, lotes, entregadores, recibos, caixa, faixas de preço, usuários, restaurantes e integração.
 - Worker que importa pedidos a cada 30 s, com idempotência, cópia do JSON original e repetição com recuo exponencial em falhas.
-- Cálculo de distância (rota de moto pela Google Routes API) e de repasse por faixa.
+- Distância por **rota de moto** na Google Routes API (com a de carro como reserva) e repasse por faixa.
+- **Relatório do dia** (`GET /api/relatorios/dia`), com todos os totais calculados no servidor.
+- **Recibos do entregador** (`GET /api/entregador/recibos`): situação, valor e entregas de cada recibo, já prontos para o app.
 - Tempo real por WebSocket/STOMP.
-- Carga de demonstração e simulador de pedidos para apresentações.
+- Carga de demonstração e **simulador de pedidos com endereços reais de Passo Fundo/RS**. Com a chave do Google, o endereço é geocodificado e o km sai da rota de moto até ele.
 
 Detalhes, endpoints e instruções em [`agilizadelivery/README.md`](agilizadelivery/README.md).
 
 ## 7. Regras de negócio principais
 
+- **Distância pelo percurso de moto**, não em linha reta: a rota viária entre a loja e o endereço do cliente (DVP 1.5.5). Sem rota de moto para o trecho, vale a de carro.
 - **Repasse por entrega, nunca por lote**, pela faixa de distância da loja (por exemplo: 0–3 km = R$ 9; 3–5 km = R$ 12). Acima da última faixa, aplica-se um valor "fora de área".
 - **O valor congela quando a entrega termina.** Mudar a tabela depois não afeta entregas finalizadas.
 - **Falha paga integral**, porque o entregador foi e voltou. Cancelamento antes de sair paga zero; durante o percurso, integral.
@@ -237,7 +244,7 @@ Detalhes, endpoints e instruções em [`agilizadelivery/README.md`](agilizadeliv
 
 **Pré-requisitos:**
 - Docker Desktop;
-- Node.js 20+ com npm (Backoffice);
+- Node.js 20 ou superior com npm (Backoffice; testado com o Node 24);
 - celular Android 8.0+ (app);
 - opcional: Postman e uma chave da Google Maps Platform (Routes e Geocoding).
 
@@ -255,9 +262,11 @@ O backend está no ar quando `http://localhost:8080/actuator/health` responde `{
 
 ```bash
 npm install
-cp .env.example .env    # VITE_API_URL=http://localhost:8080 e VITE_USE_MOCKS=false
+cp .env.example .env    # depois troque VITE_USE_MOCKS para false (com true, o front usa dados simulados)
 npm run dev             # http://localhost:5173
 ```
+
+O backend só aceita o Backoffice na origem `http://localhost:5173` (CORS). Use essa porta.
 
 **3. App**, no repositório [agiliza_mobile](https://github.com/duduSC/agiliza_mobile). Gere o APK de debug pelo wrapper Docker, sem instalar o Flutter, e instale no celular. Na tela de login, a **engrenagem** define o endereço do backend (`http://IP-do-PC:8080`). Instruções completas no README do app.
 
@@ -278,7 +287,13 @@ npm run dev             # http://localhost:5173
 | Backoffice | 400+ testes (Vitest + Testing Library + MSW) e testes de ponta a ponta (Playwright) |
 | App | ~100 testes (flutter_test) e análise estática sem avisos |
 
-As três partes passaram por **revisões completas**, com inventário de endpoints e telas e achados classificados por severidade. Toda correção de comportamento entrou com um teste que falhava antes, e a revisão terminou com uma rodada "adversarial" tentando quebrar o sistema.
+O backend e o Backoffice passaram por **revisões completas**, com inventário de endpoints e telas e achados classificados por severidade. Toda correção de comportamento entrou com um teste que falhava antes, e cada revisão terminou com uma rodada "adversarial" tentando quebrar o sistema. Exemplos do que elas pegaram:
+- o servidor em UTC fazia o "hoje" virar amanhã depois das 21h;
+- o tempo real entregava eventos de outras lojas;
+- dois despachos simultâneos podiam usar a mesma entrega;
+- o duplo clique em "pagar" enviava duas requisições.
+
+O app teve cada função verificada com análise estática e testes automatizados, e o APK foi conferido contra o código.
 
 ## 11. Como o projeto foi construído
 
@@ -296,9 +311,15 @@ As três partes passaram por **revisões completas**, com inventário de endpoin
   - sem alerta de cancelamento durante o percurso.
 
   Ficaram fora por prazo e estão previstos no DVP.
-- **Backoffice:** as telas de cadastro da loja (entregadores, faixas de preço, parâmetros e integração) e de restaurantes ainda são esboços. As funções existem na API.
+- **Recibos no app:** a API já entrega os recibos do entregador, mas a tela no app fica para a próxima versão. Hoje o entregador acompanha o acerto do dia.
+- **Backoffice:**
+  - as telas de cadastro da loja (entregadores, faixas de preço, parâmetros e integração) e de restaurantes ainda são esboços;
+  - cancelar recibo e reabrir caixa não têm botão.
+
+  Todas essas funções já existem na API.
+- **Sessão do Backoffice:** recarregar a página pede login de novo. É intencional: o token fica só na memória, por segurança.
 - **Integração com o iFood:** arquitetura pronta (interface `ProvedorDePedidos`), dependendo da homologação. Hoje o Simulador gera os pedidos.
-- **Sem chave do Google:** a distância é estimada em linha reta × 1,3.
+- **Sem chave do Google:** a distância é estimada em linha reta × 1,3, e o simulador posiciona cada pedido no centro do bairro.
 - **Fora do escopo do MVP** (DVP 1.2.4): otimização automática de rota, pagamento dentro da plataforma, iOS, chat interno e avaliação de entregadores.
 
 ## 13. Documentação
