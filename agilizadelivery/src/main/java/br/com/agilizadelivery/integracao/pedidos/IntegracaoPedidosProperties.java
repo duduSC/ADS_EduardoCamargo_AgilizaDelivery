@@ -12,9 +12,9 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
  * polling (30 s no DVP); worker.max-tentativas e worker.recuo-inicial
  * regem a repeticao com recuo exponencial do RNF04.
  *
- * simulador: quantos pedidos no maximo por ciclo, o raio em torno da loja
- * e o limite de entregas AGUARDANDO_DESPACHO a partir do qual ele para
- * de gerar (para nao inundar o mapa).
+ * simulador: quantos pedidos no maximo por ciclo e o limite de entregas
+ * AGUARDANDO_DESPACHO a partir do qual ele para de gerar (para nao inundar
+ * o mapa).
  */
 @ConfigurationProperties(prefix = "agiliza.integracao")
 public record IntegracaoPedidosProperties(Worker worker, Simulador simulador) {
@@ -24,7 +24,7 @@ public record IntegracaoPedidosProperties(Worker worker, Simulador simulador) {
             worker = new Worker(false, null, null, null);
         }
         if (simulador == null) {
-            simulador = new Simulador(null, null, null);
+            simulador = new Simulador(null, null);
         }
     }
 
@@ -43,14 +43,11 @@ public record IntegracaoPedidosProperties(Worker worker, Simulador simulador) {
         }
     }
 
-    public record Simulador(Integer maxPorCiclo, Double raioKm, Integer limiteAguardando) {
+    public record Simulador(Integer maxPorCiclo, Integer limiteAguardando) {
 
         public Simulador {
             if (maxPorCiclo == null || maxPorCiclo < 0) {
                 maxPorCiclo = 2;
-            }
-            if (raioKm == null || raioKm <= 0) {
-                raioKm = 6.0;
             }
             if (limiteAguardando == null || limiteAguardando < 1) {
                 limiteAguardando = 15;

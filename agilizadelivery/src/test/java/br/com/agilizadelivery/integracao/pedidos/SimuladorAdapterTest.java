@@ -3,11 +3,14 @@ package br.com.agilizadelivery.integracao.pedidos;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.math.BigDecimal;
 import java.util.ArrayList;
+import java.util.EnumSet;
 import java.util.List;
 import java.util.Random;
 
@@ -46,7 +49,7 @@ class SimuladorAdapterTest {
         configuracao.setProvedor(Provedores.SIMULADOR);
         configuracao.setMerchantId("demo");
         simulador = new SimuladorAdapter(entregaRepository,
-                new IntegracaoPedidosProperties(null, null), json, new Random(7));
+                new IntegracaoPedidosProperties(null, null), json, new Random(7), false);
     }
 
     private List<PedidoRecebido> gerarMuitos() {
@@ -72,11 +75,9 @@ class SimuladorAdapterTest {
     }
 
     @Test
-    @DisplayName("Dados coerentes: raio de 6 km, 1 a 4 itens, totais, pagamento e troco")
+    @DisplayName("Dados coerentes: 1 a 4 itens, totais, pagamento e troco")
     void dadosCoerentes() {
         for (PedidoRecebido pedido : gerarMuitos()) {
-            Coordenada loja = configuracao.getEstabelecimento().getCoordenada();
-            assertThat(distanciaKm(loja, pedido.coordenada())).isLessThanOrEqualTo(6.01);
             assertThat(pedido.itens()).hasSizeBetween(1, 4).allSatisfy(item -> {
                 assertThat(item.descricao()).isNotBlank();
                 assertThat(item.quantidade()).isPositive();
@@ -95,7 +96,9 @@ class SimuladorAdapterTest {
                 assertThat(pedido.trocoPara()).isGreaterThan(pedido.valorTotal());
             }
             assertThat(pedido.nomeCliente()).contains(" ");
-            assertThat(pedido.enderecoCompleto()).endsWith("Passo Fundo/RS");
+            assertThat(pedido.enderecoCompleto())
+                    .matches(".+, \\d+ - .+, Passo Fundo - RS, 990\\d{2}-\\d{3}")
+                    .endsWith(", " + pedido.cep());
         }
     }
 
@@ -121,6 +124,97 @@ class SimuladorAdapterTest {
         for (int i = 0; i < 50; i++) {
             assertThat(simulador.buscarNovosPedidos(configuracao)).hasSizeLessThanOrEqualTo(1);
         }
+    }
+
+    @Test
+    @DisplayName("A lista tem ao menos 25 enderecos reais, sem repeticao, com CEP de Passo Fundo e bairro mapeado")
+    void listaDeEnderecos() {
+        assertThat(EnderecosPassoFundo.ENDERECOS).hasSizeGreaterThanOrEqualTo(25)
+                .extracting(EnderecosPassoFundo.Endereco::linha).doesNotHaveDuplicates();
+        assertThat(EnderecosPassoFundo.ENDERECOS).allSatisfy(endereco -> {
+            assertThat(endereco.cep()).matches("990\\d{2}-\\d{3}");
+            assertThat(endereco.numero()).isPositive();
+            assertThat(EnderecosPassoFundo.CENTRO_DO_BAIRRO).containsKey(endereco.bairro());
+        });
+    }
+
+    @Test
+    @DisplayName("Sem chave: endereco da lista e coordenada a ate 300 m do centro do bairro")
+    void semChaveCoordenadaDoBairro() {
+        List<PedidoRecebido> pedidos = gerarMuitos();
+        assertThat(pedidos).isNotEmpty().allSatisfy(pedido -> {
+            EnderecosPassoFundo.Endereco endereco = daLista(pedido);
+            assertThat(pedido.bairro()).isEqualTo(endereco.bairro());
+            assertThat(pedido.cep()).isEqualTo(endereco.cep());
+            assertThat(pedido.coordenada()).isNotNull();
+            assertThat(distanciaKm(EnderecosPassoFundo.CENTRO_DO_BAIRRO.get(endereco.bairro()), pedido.coordenada()))
+                    .isLessThanOrEqualTo(0.301);
+        });
+        assertThat(pedidos.stream().map(PedidoRecebido::enderecoCompleto).distinct().count()).isGreaterThan(10);
+    }
+
+    @Test
+    @DisplayName("Com chave: o pedido vai sem coordenada, para o backend geocodificar o endereco")
+    void comChaveSemCoordenada() {
+        simulador = new SimuladorAdapter(entregaRepository,
+                new IntegracaoPedidosProperties(null, null), json, new Random(7), true);
+        List<PedidoRecebido> pedidos = gerarMuitos();
+        assertThat(pedidos).isNotEmpty().allSatisfy(pedido -> {
+            daLista(pedido);
+            assertThat(pedido.coordenada()).isNull();
+            JsonNode entrega = json.readTree(pedido.payloadJson()).get("deliveryAddress");
+            assertThat(entrega.get("latitude").isNull()).isTrue();
+            assertThat(entrega.get("postalCode").asString()).isEqualTo(pedido.cep());
+        });
+    }
+
+    @Test
+    @DisplayName("Linha do endereco no formato do Google, com bairro, cidade, UF e CEP")
+    void linhaDoEndereco() {
+        EnderecosPassoFundo.Endereco endereco = new EnderecosPassoFundo.Endereco("Rua Morom", 980, "Centro", "99010-030");
+        assertThat(endereco.linha()).isEqualTo("Rua Morom, 980 - Centro, Passo Fundo - RS, 99010-030");
+    }
+
+    @Test
+    @DisplayName("Nao repete o endereco de uma entrega ainda no mapa, nem dois pedidos do mesmo ciclo")
+    void evitaEnderecoEmUso() {
+        List<EnderecosPassoFundo.Endereco> livres = EnderecosPassoFundo.ENDERECOS.subList(0, 2);
+        List<String> emUso = EnderecosPassoFundo.ENDERECOS.subList(2, EnderecosPassoFundo.ENDERECOS.size()).stream()
+                .map(EnderecosPassoFundo.Endereco::linha)
+                .toList();
+        when(entregaRepository.findEnderecosPorStatus(any(), any())).thenReturn(emUso);
+
+        List<PedidoRecebido> pedidos = new ArrayList<>();
+        for (int i = 0; i < 200; i++) {
+            List<PedidoRecebido> ciclo = simulador.buscarNovosPedidos(configuracao);
+            assertThat(ciclo).extracting(PedidoRecebido::enderecoCompleto).doesNotHaveDuplicates();
+            pedidos.addAll(ciclo);
+        }
+
+        assertThat(pedidos).isNotEmpty()
+                .extracting(PedidoRecebido::enderecoCompleto)
+                .allMatch(linha -> livres.stream().anyMatch(livre -> livre.linha().equals(linha)));
+        verify(entregaRepository, atLeastOnce()).findEnderecosPorStatus(
+                eq(configuracao.getEstabelecimento().getId()),
+                eq(EnumSet.of(StatusEntrega.AGUARDANDO_DESPACHO, StatusEntrega.DESPACHADA, StatusEntrega.EM_ROTA)));
+    }
+
+    @Test
+    @DisplayName("Com todos os enderecos em uso, continua gerando, com enderecos da lista")
+    void todosEmUso() {
+        when(entregaRepository.findEnderecosPorStatus(any(), any())).thenReturn(
+                EnderecosPassoFundo.ENDERECOS.stream().map(EnderecosPassoFundo.Endereco::linha).toList());
+
+        List<PedidoRecebido> pedidos = gerarMuitos();
+
+        assertThat(pedidos).isNotEmpty().allSatisfy(SimuladorAdapterTest::daLista);
+    }
+
+    private static EnderecosPassoFundo.Endereco daLista(PedidoRecebido pedido) {
+        return EnderecosPassoFundo.ENDERECOS.stream()
+                .filter(endereco -> endereco.linha().equals(pedido.enderecoCompleto()))
+                .findFirst()
+                .orElseThrow(() -> new AssertionError("fora da lista: " + pedido.enderecoCompleto()));
     }
 
     private static double distanciaKm(Coordenada a, Coordenada b) {

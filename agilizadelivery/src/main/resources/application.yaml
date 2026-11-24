@@ -47,6 +47,8 @@ agiliza:
     geocoding-url: https://maps.googleapis.com/maps/api/geocode/json
     timeout: 5s
     cache-tamanho: 1000
+    # travelMode da Routes API: TWO_WHEELER (moto, D013) ou DRIVE (carro). Sem rota de moto, tenta DRIVE.
+    modo-viagem: ${AGILIZA_MAPS_MODO_VIAGEM:TWO_WHEELER}
   seguranca:
     cpf:
       chave-cifra: ${AGILIZA_CPF_CHAVE_CIFRA:}
@@ -71,7 +73,6 @@ agiliza:
       max-tentativas: 5
     simulador:
       max-por-ciclo: 2
-      raio-km: 6
       # Para de gerar quando a loja tiver este numero de entregas aguardando.
       limite-aguardando: 15
   # Carga de demonstracao (D009, T010). SO DESENVOLVIMENTO: desligada aqui

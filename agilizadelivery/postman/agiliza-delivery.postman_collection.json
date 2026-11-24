@@ -2198,6 +2198,97 @@
           }
         },
         {
+          "name": "Relatório do dia (hoje)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/relatorios/dia",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "relatorios",
+                "dia"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tokenOperador}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "const r = pm.response.json();",
+                  "pm.test('totais calculados no servidor', () => {",
+                  "  pm.expect(r).to.include.keys('data', 'totalEntregas', 'entregues', 'falhas', 'canceladas', 'entregadoresQueTrabalharam', 'valorTotalRepasse', 'valorPago', 'valorAPagar', 'porEntregador');",
+                  "  pm.expect(r.totalEntregas).to.eql(r.entregues + r.falhas + r.canceladas);",
+                  "  pm.expect(r.entregadoresQueTrabalharam).to.eql(r.porEntregador.length);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Relatório de um dia",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/relatorios/dia?data={{hoje}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "relatorios",
+                "dia"
+              ],
+              "query": [
+                {
+                  "key": "data",
+                  "value": "{{hoje}}"
+                }
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tokenOperador}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('data pedida', () => pm.expect(pm.response.json().data).to.eql(pm.environment.get('hoje')));"
+                ]
+              }
+            }
+          ]
+        },
+        {
           "name": "Falhas de integração pendentes",
           "request": {
             "method": "GET",
@@ -2615,6 +2706,110 @@
           }
         },
         {
+          "name": "Meus recibos",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/entregador/recibos",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "entregador",
+                "recibos"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tokenEntregador}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "description": "Recibos do próprio entregador (D013), do mais recente para o mais antigo: dia do caixa, depois a emissão. Status GERADO, PAGO ou CANCELADO. Sem as entregas (veja o detalhe). Guarda o id do mais recente em `reciboEntregadorId`. A lista fica vazia até o operador gerar um recibo para este entregador (Operação → Gerar recibo)."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "const recibos = pm.response.json();",
+                  "pm.test('lista no contrato da D013', () => {",
+                  "  pm.expect(recibos).to.be.an('array');",
+                  "  recibos.forEach(r => {",
+                  "    pm.expect(r).to.include.keys('id', 'dataReferencia', 'periodoInicio', 'periodoFim', 'qtdEntregas', 'valorTotal', 'status', 'pagoEm', 'criadoEm');",
+                  "    pm.expect(r).to.not.have.property('entregas');",
+                  "    pm.expect(['GERADO', 'PAGO', 'CANCELADO']).to.include(r.status);",
+                  "  });",
+                  "});",
+                  "if (recibos.length > 0) {",
+                  "  pm.environment.set('reciboEntregadorId', recibos[0].id);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Meu recibo (detalhe)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/entregador/recibos/{{reciboEntregadorId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "entregador",
+                "recibos",
+                "{{reciboEntregadorId}}"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tokenEntregador}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "description": "Um recibo do próprio entregador com as entregas, na ordem de finalização (D013). Recibo de outro entregador responde 404, igual a um id que não existe. Recibo CANCELADO vem com `entregas` vazia: o cancelamento as desvincula (UC03 A2). Rode \"Meus recibos\" antes, para guardar `reciboEntregadorId`."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "const r = pm.response.json();",
+                  "pm.test('detalhe com as entregas do recibo', () => {",
+                  "  pm.expect(r.id).to.eql(pm.environment.get('reciboEntregadorId'));",
+                  "  pm.expect(r.entregas).to.be.an('array');",
+                  "  r.entregas.forEach(e => pm.expect(e).to.include.keys('entregaId', 'nomeCliente', 'finalizadaEm', 'status', 'distanciaKm', 'valorRepasse'));",
+                  "  if (r.status === 'CANCELADO') {",
+                  "    pm.expect(r.entregas).to.have.lengthOf(0);",
+                  "  } else {",
+                  "    pm.expect(r.entregas).to.have.lengthOf(r.qtdEntregas);",
+                  "  }",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
           "name": "Posição pela rota antiga (obsoleta)",
           "request": {
             "method": "PATCH",
@@ -2701,7 +2896,7 @@
           }
         }
       ],
-      "description": "**Pasta avulsa: rode um request por vez, nunca a pasta inteira em sequência.** Depende de variáveis guardadas por outros requests. Precisa do token do entregador no canal APP (Autenticação). Iniciar, status e contestar precisam de um lote despachado para ele (`loteId`, `entregaId1`, `entregaId2`)."
+      "description": "**Pasta avulsa: rode um request por vez, nunca a pasta inteira em sequência.** Depende de variáveis guardadas por outros requests. Precisa do token do entregador no canal APP (Autenticação). Iniciar, status e contestar precisam de um lote despachado para ele (`loteId`, `entregaId1`, `entregaId2`). \"Meus recibos\" guarda o mais recente em `reciboEntregadorId`, usado por \"Meu recibo (detalhe)\"; a lista só tem itens depois que o operador gera um recibo para este entregador."
     },
     {
       "name": "Fluxo ponta a ponta",

@@ -36,6 +36,16 @@ public interface EntregaRepository extends JpaRepository<Entrega, UUID> {
     /** Limite de seguranca do simulador de pedidos (T011). */
     long countByEstabelecimentoIdAndStatus(UUID estabelecimentoId, StatusEntrega status);
 
+    /** Enderecos das entregas da loja nestes status: o simulador evita repeti-los (T015). */
+    @Query("""
+            select e.enderecoCompleto from Entrega e
+            where e.estabelecimento.id = :estabelecimentoId
+              and e.status in :status
+            """)
+    List<String> findEnderecosPorStatus(
+            @Param("estabelecimentoId") UUID estabelecimentoId,
+            @Param("status") Collection<StatusEntrega> status);
+
     List<Entrega> findByEstabelecimentoIdAndIdIn(UUID estabelecimentoId, Collection<UUID> ids);
 
     /** Entregas de um lote na ordem da rota definida pelo operador. */
@@ -52,6 +62,30 @@ public interface EntregaRepository extends JpaRepository<Entrega, UUID> {
     List<Entrega> findDoLoteComItens(@Param("loteId") UUID loteId);
 
     List<Entrega> findByReciboId(UUID reciboId);
+
+    /** Entregas de um recibo da loja, na ordem em que foram finalizadas (D013). */
+    List<Entrega> findByEstabelecimentoIdAndReciboIdOrderByFinalizadaEmAscIdAsc(
+            UUID estabelecimentoId, UUID reciboId);
+
+    /**
+     * Entregas da loja finalizadas em [inicio, fim), com o entregador do
+     * lote e o recibo numa consulta so, para o relatorio do dia (D013). A
+     * cancelada antes do despacho vem sem lote.
+     */
+    @Query("""
+            select e from Entrega e
+            left join fetch e.lote l
+            left join fetch l.motoboy m
+            left join fetch m.usuario
+            left join fetch e.recibo
+            where e.estabelecimento.id = :estabelecimentoId
+              and e.finalizadaEm >= :inicio
+              and e.finalizadaEm < :fim
+            """)
+    List<Entrega> findFinalizadasNoPeriodoComEntregador(
+            @Param("estabelecimentoId") UUID estabelecimentoId,
+            @Param("inicio") LocalDateTime inicio,
+            @Param("fim") LocalDateTime fim);
 
     /** Entregas finalizadas por um entregador no periodo (UC03 e UC08). */
     @EntityGraph(attributePaths = "faixaPreco")

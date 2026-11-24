@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import java.math.BigDecimal;
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -23,6 +24,7 @@ import org.springframework.jdbc.datasource.init.ResourceDatabasePopulator;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
 
+import br.com.agilizadelivery.entity.model.Caixa;
 import br.com.agilizadelivery.entity.model.DistanciaPreco;
 import br.com.agilizadelivery.entity.model.Entrega;
 import br.com.agilizadelivery.entity.model.Estabelecimento;
@@ -30,6 +32,7 @@ import br.com.agilizadelivery.entity.model.ItemPedido;
 import br.com.agilizadelivery.entity.model.LoteEntrega;
 import br.com.agilizadelivery.entity.model.Motoboy;
 import br.com.agilizadelivery.entity.model.PedidoExterno;
+import br.com.agilizadelivery.entity.model.Recibo;
 import br.com.agilizadelivery.entity.model.Usuario;
 import br.com.agilizadelivery.entity.model.enums.PerfilUsuario;
 import br.com.agilizadelivery.entity.model.enums.StatusEntrega;
@@ -66,7 +69,7 @@ class DesempenhoConsultasTest {
     private JdbcTemplate jdbc;
 
     @Test
-    @DisplayName("Sem N+1 nas telas de despacho, frota e acerto e no polling do app")
+    @DisplayName("Sem N+1 nas telas de despacho, frota, acerto e relatório do dia, no polling e nos recibos do app")
     void semNMaisUm() throws Exception {
         Map<String, Long> comUm = consultasPorEndpoint(1);
         Map<String, Long> comSeis = consultasPorEndpoint(6);
@@ -94,14 +97,23 @@ class DesempenhoConsultasTest {
         Usuario operador = cenario.usuario(loja, PerfilUsuario.OPERADOR);
         String bearerOperador = cenario.bearer(operador);
         Motoboy motoboy = cenario.motoboy(loja);
+        List<Motoboy> outros = new ArrayList<>();
         for (int i = 1; i < linhas; i++) {
-            cenario.motoboy(loja);
+            outros.add(cenario.motoboy(loja));
         }
 
         LoteEntrega concluido = lote(loja, motoboy, operador, StatusLote.CONCLUIDO);
         LoteEntrega ativo = lote(loja, motoboy, operador, StatusLote.EM_ROTA);
+        Caixa caixa = cenario.caixa(loja);
+        Recibo reciboDetalhado = cenario.recibo(loja, motoboy, caixa, operador);
         AtomicInteger numero = new AtomicInteger();
         for (int i = 0; i < linhas; i++) {
+            // Recibos do app (D013): a lista com N recibos e o detalhe com N entregas
+            if (i > 0) {
+                cenario.recibo(loja, motoboy, caixa, operador);
+            }
+            cenario.entregaComRecibo(loja, reciboDetalhado);
+
             cenario.entrega(loja, StatusEntrega.AGUARDANDO_DESPACHO);
             lote(loja, motoboy, operador, StatusLote.DESPACHADO);
 
@@ -140,6 +152,14 @@ class DesempenhoConsultasTest {
             entregaRepository.save(emRota);
         }
 
+        // Relatorio do dia: entregas finalizadas de varios entregadores (D013)
+        for (Motoboy outro : outros) {
+            Entrega doOutro = cenario.entrega(loja, StatusEntrega.ENTREGUE);
+            doOutro.setLote(lote(loja, outro, operador, StatusLote.CONCLUIDO));
+            doOutro.setFinalizadaEm(HorarioLocal.hoje().atTime(13, 0));
+            entregaRepository.save(doOutro);
+        }
+
         String hoje = HorarioLocal.hoje().toString();
         Map<String, Long> consultas = new LinkedHashMap<>();
         consultas.put("entregas", contar("/api/entregas", bearerOperador));
@@ -153,6 +173,10 @@ class DesempenhoConsultasTest {
         consultas.put("acerto do app", contar("/api/entregador/acerto", cenario.bearer(motoboy.getUsuario())));
         consultas.put("lote-ativo do app",
                 contar("/api/entregador/lote-ativo", cenario.bearer(motoboy.getUsuario())));
+        consultas.put("relatorio do dia", contar("/api/relatorios/dia?data=" + hoje, bearerOperador));
+        consultas.put("recibos do app", contar("/api/entregador/recibos", cenario.bearer(motoboy.getUsuario())));
+        consultas.put("recibo do app",
+                contar("/api/entregador/recibos/" + reciboDetalhado.getId(), cenario.bearer(motoboy.getUsuario())));
         consultas.put("rota", contar("/api/lotes/" + ativo.getId() + "/rota", bearerOperador));
         return consultas;
     }
