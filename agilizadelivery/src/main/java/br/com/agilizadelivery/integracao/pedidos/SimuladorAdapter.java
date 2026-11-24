@@ -3,9 +3,12 @@ package br.com.agilizadelivery.integracao.pedidos;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.ArrayList;
+import java.util.EnumSet;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.random.RandomGenerator;
@@ -38,6 +41,12 @@ import tools.jackson.databind.ObjectMapper;
  * revisao, vai o centro do bairro no OpenStreetMap, deslocado ate 300 m
  * para os pinos nao se sobreporem (PROVISORIO, so nesse modo).
  *
+ * O sorteio evita o endereco de uma entrega da loja ainda no mapa
+ * (aguardando, despachada ou em rota) e o de outro pedido do mesmo ciclo:
+ * com a chave, o mesmo endereco tem sempre a mesma coordenada (cache da
+ * geocodificacao), e os dois pinos ficariam um sobre o outro. Se todos os
+ * enderecos estiverem em uso, o sorteio vale entre todos.
+ *
  * O payload devolvido imita a resposta de um provedor real e e gravado
  * intacto em PEDIDO_EXTERNO (RNF13).
  */
@@ -49,6 +58,9 @@ public class SimuladorAdapter implements ProvedorDePedidos {
     /** Deslocamento maximo em torno do centro do bairro, so no modo sem chave. */
     private static final double DESLOCAMENTO_KM = 0.3;
     private static final BigDecimal TAXA_ENTREGA = new BigDecimal("7.00");
+    /** Entregas ainda no mapa da operacao, cujo endereco o sorteio evita. */
+    private static final Set<StatusEntrega> NO_MAPA = EnumSet.of(
+            StatusEntrega.AGUARDANDO_DESPACHO, StatusEntrega.DESPACHADA, StatusEntrega.EM_ROTA);
 
     private static final String[] NOMES = {
         "Ana", "Bruno", "Camila", "Diego", "Eduarda", "Felipe", "Gabriela", "Henrique", "Isabela", "João",
@@ -130,11 +142,26 @@ public class SimuladorAdapter implements ProvedorDePedidos {
             return List.of();
         }
         int quantidade = (int) Math.min(vagas, aleatorio.nextInt(parametros.maxPorCiclo() + 1));
+        if (quantidade == 0) {
+            return List.of();
+        }
+        Set<String> emUso = new HashSet<>(entregaRepository.findEnderecosPorStatus(lojaId, NO_MAPA));
         List<PedidoRecebido> pedidos = new ArrayList<>(quantidade);
         for (int i = 0; i < quantidade; i++) {
-            pedidos.add(gerar(configuracao.getMerchantId()));
+            EnderecosPassoFundo.Endereco endereco = sortearEndereco(emUso);
+            emUso.add(endereco.linha());
+            pedidos.add(gerar(configuracao.getMerchantId(), endereco));
         }
         return pedidos;
+    }
+
+    /** Um endereco fora de uso; com todos em uso, qualquer um. */
+    private EnderecosPassoFundo.Endereco sortearEndereco(Set<String> emUso) {
+        List<EnderecosPassoFundo.Endereco> livres = EnderecosPassoFundo.ENDERECOS.stream()
+                .filter(endereco -> !emUso.contains(endereco.linha()))
+                .toList();
+        List<EnderecosPassoFundo.Endereco> opcoes = livres.isEmpty() ? EnderecosPassoFundo.ENDERECOS : livres;
+        return opcoes.get(aleatorio.nextInt(opcoes.size()));
     }
 
     /** O simulador nao exige confirmacao. */
@@ -142,13 +169,11 @@ public class SimuladorAdapter implements ProvedorDePedidos {
     public void confirmarRecebimento(ConfiguracaoIntegracao configuracao, String idExterno) {
     }
 
-    private PedidoRecebido gerar(String merchantId) {
+    private PedidoRecebido gerar(String merchantId, EnderecosPassoFundo.Endereco sorteado) {
         String idExterno = "SIM-" + UUID.randomUUID();
         String numero = String.valueOf(numeroExibicao.incrementAndGet());
         String nome = sortear(NOMES) + " " + sortear(SOBRENOMES);
         String telefone = "549" + (91000000 + aleatorio.nextInt(9000000));
-        EnderecosPassoFundo.Endereco sorteado =
-                EnderecosPassoFundo.ENDERECOS.get(aleatorio.nextInt(EnderecosPassoFundo.ENDERECOS.size()));
         String bairro = sorteado.bairro();
         String endereco = sorteado.linha();
         String cep = sorteado.cep();

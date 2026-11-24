@@ -11,8 +11,9 @@ import br.com.agilizadelivery.entity.model.embeddable.Coordenada;
  *
  * Logradouro, bairro e CEP vem da base publica dos Correios, consultada pelo
  * ViaCEP (viacep.com.br) em 23/11/2026; o numero de cada endereco foi escolhido
- * dentro da faixa (e do lado par/impar) que o CEP cobre. Todos ficam a ate
- * cerca de 3 km da loja da demonstracao (Av. Brasil, Centro).
+ * dentro da faixa (e do lado par/impar) que o CEP cobre. Os bairros sao o
+ * Centro, onde fica a loja da demonstracao (Av. Brasil Centro, 500), e seis
+ * vizinhos; o centro de cada um fica a ate 2,7 km da loja, em linha reta.
  *
  * A lista e fixa no codigo: nada e consultado em tempo de execucao.
  *
@@ -25,8 +26,12 @@ final class EnderecosPassoFundo {
 
     record Endereco(String logradouro, int numero, String bairro, String cep) {
 
+        /**
+         * No formato dos enderecos brasileiros do Google, com o CEP: e o
+         * texto que o backend geocodifica quando ha chave (DVP 1.5.6, passo 5).
+         */
         String linha() {
-            return logradouro + ", " + numero + " - " + bairro + ", Passo Fundo/RS";
+            return logradouro + ", " + numero + " - " + bairro + ", Passo Fundo - RS, " + cep;
         }
     }
 

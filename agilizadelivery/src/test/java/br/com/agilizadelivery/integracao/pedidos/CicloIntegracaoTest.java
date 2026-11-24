@@ -6,8 +6,10 @@ import java.math.BigDecimal;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.Random;
 import java.util.UUID;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.function.Function;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -32,8 +34,15 @@ import br.com.agilizadelivery.repository.ConfiguracaoIntegracaoRepository;
 import br.com.agilizadelivery.repository.EntregaRepository;
 import br.com.agilizadelivery.repository.FalhaIntegracaoRepository;
 import br.com.agilizadelivery.repository.PedidoExternoRepository;
+import br.com.agilizadelivery.service.rota.ServicoDeGeocodificacao;
+import br.com.agilizadelivery.service.rota.ServicoDeRotas;
+import br.com.agilizadelivery.service.support.BuscadorTenant;
+import br.com.agilizadelivery.service.support.CalculadoraRepasse;
 import br.com.agilizadelivery.service.support.ImportacaoPedido;
+import br.com.agilizadelivery.service.support.LocalizacaoEntrega;
 import br.com.agilizadelivery.service.support.Provedores;
+import br.com.agilizadelivery.service.support.TransicaoEntrega;
+import br.com.agilizadelivery.websocket.PublicadorTempoReal;
 import tools.jackson.databind.ObjectMapper;
 
 /**
@@ -74,6 +83,18 @@ class CicloIntegracaoTest {
     @Autowired
     private TransactionTemplate transacao;
 
+    @Autowired
+    private BuscadorTenant buscador;
+
+    @Autowired
+    private TransicaoEntrega transicao;
+
+    @Autowired
+    private PublicadorTempoReal publicador;
+
+    @Autowired
+    private CalculadoraRepasse calculadoraRepasse;
+
     private Estabelecimento loja;
 
     @BeforeEach
@@ -91,7 +112,12 @@ class CicloIntegracaoTest {
     }
 
     private CicloIntegracao cicloCom(ProvedorDePedidos provedor) {
-        return new CicloIntegracao(List.of(provedor), configuracaoRepository, falhaRepository, importacao, PARAMETROS);
+        return cicloCom(provedor, importacao);
+    }
+
+    private CicloIntegracao cicloCom(ProvedorDePedidos provedor, ImportacaoPedido importacaoUsada) {
+        return new CicloIntegracao(List.of(provedor), configuracaoRepository, falhaRepository, importacaoUsada,
+                PARAMETROS);
     }
 
     private CicloIntegracao cicloComSimulador() {
@@ -122,6 +148,10 @@ class CicloIntegracaoTest {
             assertThat(entrega.getPendenteRevisao()).isFalse();
             assertThat(entrega.getDistanciaKm()).isNotNull();
             assertThat(entrega.getValorRepasse()).isNotNull();
+            // Sem chave (D009): endereco real da lista e coordenada aproximada do bairro
+            assertThat(EnderecosPassoFundo.ENDERECOS).extracting(EnderecosPassoFundo.Endereco::linha)
+                    .contains(entrega.getEnderecoCompleto());
+            assertThat(entrega.getCoordenada()).isNotNull();
         });
         transacao.executeWithoutResult(status -> {
             PedidoExterno pedido = entregaRepository.findById(entregas.getFirst().getId()).orElseThrow()
@@ -232,6 +262,109 @@ class CicloIntegracaoTest {
             ciclo.executar();
         }
         assertThat(aguardando()).hasSize(15).allSatisfy(entrega -> assertThat(entrega.getPedidoExterno()).isNull());
+    }
+
+    @Test
+    @DisplayName("Com chave: o pedido do simulador chega sem coordenada, o endereco e geocodificado e o km sai da rota ate ele")
+    void comChaveGeocodificaOEndereco() {
+        configuracao(true);
+        GeocodificacaoFalsa geocodificacao = new GeocodificacaoFalsa();
+        RotasFalsas rotas = new RotasFalsas(new BigDecimal("4.20"));
+        CicloIntegracao ciclo = cicloCom(
+                new SimuladorAdapter(entregaRepository, PARAMETROS, objectMapper, new Random(11), true),
+                importacaoComChave(geocodificacao, rotas));
+        for (int i = 0; i < 10 && aguardando().isEmpty(); i++) {
+            ciclo.executar();
+        }
+
+        List<Entrega> entregas = aguardando();
+        assertThat(entregas).isNotEmpty().allSatisfy(entrega -> {
+            assertThat(EnderecosPassoFundo.ENDERECOS).extracting(EnderecosPassoFundo.Endereco::linha)
+                    .contains(entrega.getEnderecoCompleto());
+            assertThat(geocodificacao.consultados).contains(entrega.getEnderecoCompleto());
+            Coordenada esperada = GeocodificacaoFalsa.coordenadaDe(entrega.getEnderecoCompleto());
+            assertThat(entrega.getCoordenada().getLatitude()).isEqualByComparingTo(esperada.getLatitude());
+            assertThat(entrega.getCoordenada().getLongitude()).isEqualByComparingTo(esperada.getLongitude());
+            assertThat(entrega.getDistanciaKm()).isEqualByComparingTo("4.20");
+            // a loja de teste nao tem faixas: vale o repasse de fora de area (DVP 1.5.5, passo 3)
+            assertThat(entrega.getValorRepasse()).isEqualByComparingTo("15.00");
+            assertThat(entrega.getPendenteRevisao()).isFalse();
+        });
+        assertThat(rotas.destinos).hasSize(entregas.size()).allSatisfy(destino -> assertThat(
+                entregas.stream().anyMatch(entrega -> entrega.getCoordenada().getLatitude()
+                        .compareTo(destino.getLatitude()) == 0))
+                .isTrue());
+        transacao.executeWithoutResult(status -> {
+            PedidoExterno pedido = entregaRepository.findById(entregas.getFirst().getId()).orElseThrow()
+                    .getPedidoExterno();
+            assertThat(pedido.getPayloadJson()).contains("\"latitude\":null");
+        });
+    }
+
+    @Test
+    @DisplayName("Com chave: a idempotencia continua, e o pedido repetido nem chega a ser geocodificado")
+    void comChaveIdempotente() {
+        ConfiguracaoIntegracao configuracao = configuracao(true);
+        GeocodificacaoFalsa geocodificacao = new GeocodificacaoFalsa();
+        ImportacaoPedido importacaoComChave =
+                importacaoComChave(geocodificacao, new RotasFalsas(new BigDecimal("2.00")));
+        SimuladorAdapter simulador =
+                new SimuladorAdapter(entregaRepository, PARAMETROS, objectMapper, new Random(3), true);
+        List<PedidoRecebido> gerados = List.of();
+        for (int i = 0; i < 20 && gerados.isEmpty(); i++) {
+            gerados = simulador.buscarNovosPedidos(configuracao);
+        }
+        PedidoRecebido pedido = gerados.getFirst();
+
+        assertThat(importacaoComChave.importar(configuracao, pedido)).isPresent();
+        assertThat(importacaoComChave.importar(configuracao, pedido)).isEmpty();
+
+        assertThat(aguardando()).hasSize(1);
+        assertThat(geocodificacao.consultados).containsExactly(pedido.enderecoCompleto());
+    }
+
+    /** A importacao do contexto, com a geocodificacao e as rotas do Google trocadas por falsas. */
+    private ImportacaoPedido importacaoComChave(ServicoDeGeocodificacao geocodificacao, ServicoDeRotas rotas) {
+        return new ImportacaoPedido(pedidoRepository, entregaRepository, buscador,
+                new LocalizacaoEntrega(geocodificacao, rotas, calculadoraRepasse), transicao, publicador, transacao);
+    }
+
+    /** Uma coordenada fixa por endereco da lista; guarda o que foi pedido. */
+    private static final class GeocodificacaoFalsa implements ServicoDeGeocodificacao {
+
+        private final List<String> consultados = new CopyOnWriteArrayList<>();
+
+        static Coordenada coordenadaDe(String endereco) {
+            int indice = EnderecosPassoFundo.ENDERECOS.stream().map(EnderecosPassoFundo.Endereco::linha).toList()
+                    .indexOf(endereco);
+            assertThat(indice).as("endereco da lista: " + endereco).isNotNegative();
+            return new Coordenada(
+                    new BigDecimal("-28.2500000").subtract(new BigDecimal("0.0010000").multiply(BigDecimal.valueOf(indice))),
+                    new BigDecimal("-52.4000000"));
+        }
+
+        @Override
+        public Optional<Coordenada> geocodificar(String endereco) {
+            consultados.add(endereco);
+            return Optional.of(coordenadaDe(endereco));
+        }
+    }
+
+    /** Distancia fixa; guarda os destinos consultados. */
+    private static final class RotasFalsas implements ServicoDeRotas {
+
+        private final BigDecimal km;
+        private final List<Coordenada> destinos = new CopyOnWriteArrayList<>();
+
+        RotasFalsas(BigDecimal km) {
+            this.km = km;
+        }
+
+        @Override
+        public Optional<BigDecimal> distanciaKm(Coordenada origem, Coordenada destino) {
+            destinos.add(destino);
+            return Optional.of(km);
+        }
     }
 
     /** Provedor de teste que so responde pela propria configuracao. */
