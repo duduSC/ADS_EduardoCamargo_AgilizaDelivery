@@ -13,7 +13,7 @@ import br.com.agilizadelivery.entity.model.embeddable.Coordenada;
  * ViaCEP (viacep.com.br) em 23/11/2026; o numero de cada endereco foi escolhido
  * dentro da faixa (e do lado par/impar) que o CEP cobre. Os bairros sao o
  * Centro, onde fica a loja da demonstracao (Av. Brasil Centro, 500), e seis
- * vizinhos; o centro de cada um fica a ate 2,7 km da loja, em linha reta.
+ * bairros proximos; o centro de cada um fica a ate 2,7 km da loja, em linha reta.
  *
  * A lista e fixa no codigo: nada e consultado em tempo de execucao.
  *
